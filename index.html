@@ -1,0 +1,753 @@
+<div id="app-root"></div>
+<style>
+  :root{
+    --ink:#1c2430;
+    --paper:#f6f5f2;
+    --card:#ffffff;
+    --line:#e2e0da;
+    --accent:#e0722c;
+    --accent-ink:#ffffff;
+    --ok:#2f7a4d;
+    --warn:#c94a3d;
+    --muted:#7a7f87;
+    --font-display: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+    --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  #app-root{
+    font-family:var(--font-body);
+    color:var(--ink);
+    background:var(--paper);
+    min-height:100vh;
+    max-width:480px;
+    margin:0 auto;
+    padding-bottom:90px;
+    position:relative;
+  }
+  .topbar{
+    padding:22px 20px 16px;
+    background:var(--ink);
+    color:#fff;
+    border-radius:0 0 20px 20px;
+  }
+  .eyebrow{
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:#b9c0cc;
+    margin:0 0 4px;
+    font-weight:600;
+  }
+  .topbar h1{
+    font-family:var(--font-display);
+    font-size:22px;
+    margin:0;
+    font-weight:700;
+    letter-spacing:-.01em;
+  }
+  .content{ padding:18px 16px 8px; }
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:16px;
+    margin-bottom:14px;
+  }
+  label{
+    display:block;
+    font-size:12px;
+    font-weight:600;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    margin:0 0 6px;
+  }
+  select, input[type=text], textarea{
+    width:100%;
+    font-family:var(--font-body);
+    font-size:15px;
+    padding:12px 12px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:#fbfbfa;
+    color:var(--ink);
+    margin-bottom:14px;
+  }
+  textarea{ min-height:80px; resize:vertical; }
+  .field:last-child select, .field:last-child textarea{ margin-bottom:0;}
+  .checklist-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 4px;
+    border-bottom:1px solid var(--line);
+  }
+  .checklist-item:last-child{ border-bottom:none; }
+  .checklist-item span{ font-size:14.5px; font-weight:500; }
+  .toggle{
+    display:flex;
+    border-radius:999px;
+    overflow:hidden;
+    border:1px solid var(--line);
+    flex-shrink:0;
+  }
+  .toggle button{
+    border:none;
+    background:#fff;
+    padding:6px 12px;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+    color:var(--muted);
+    font-family:var(--font-body);
+  }
+  .toggle button.active.ok{ background:var(--ok); color:#fff; }
+  .toggle button.active.warn{ background:var(--warn); color:#fff; }
+
+  .btn-primary{
+    width:100%;
+    background:var(--accent);
+    color:var(--accent-ink);
+    border:none;
+    border-radius:12px;
+    padding:15px;
+    font-size:15px;
+    font-weight:700;
+    font-family:var(--font-display);
+    cursor:pointer;
+    letter-spacing:.01em;
+  }
+  .btn-primary:active{ opacity:.85; }
+  .btn-primary:disabled{ background:#c9c6bf; cursor:not-allowed; }
+
+  .tabbar{
+    position:fixed;
+    bottom:0; left:0; right:0;
+    max-width:480px;
+    margin:0 auto;
+    background:#fff;
+    border-top:1px solid var(--line);
+    display:flex;
+    padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+    gap:8px;
+  }
+  .tabbar button{
+    flex:1;
+    background:none;
+    border:none;
+    padding:10px 4px;
+    font-family:var(--font-display);
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--muted);
+    border-radius:10px;
+    cursor:pointer;
+  }
+  .tabbar button.active{ background:var(--ink); color:#fff; }
+
+  .hist-card{ margin-bottom:12px; }
+  .hist-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:6px;
+  }
+  .hist-local{ font-family:var(--font-display); font-weight:700; font-size:15px; }
+  .hist-date{ font-size:11.5px; color:var(--muted); }
+  .hist-encargada{ font-size:12.5px; color:var(--muted); margin-bottom:8px; }
+  .chip-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+  .chip{
+    font-size:11px;
+    font-weight:700;
+    padding:4px 9px;
+    border-radius:999px;
+  }
+  .chip.ok{ background:#e6f2ea; color:var(--ok); }
+  .chip.warn{ background:#fbe9e6; color:var(--warn); }
+  .hist-note{
+    font-size:13px;
+    color:var(--ink);
+    background:#fbfbfa;
+    border-radius:8px;
+    padding:8px 10px;
+    border:1px solid var(--line);
+  }
+  .empty{
+    text-align:center;
+    padding:50px 20px;
+    color:var(--muted);
+    font-size:14px;
+  }
+  .filter-row select{ margin-bottom:0; }
+  .toast{
+    position:fixed;
+    bottom:96px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--ink);
+    color:#fff;
+    padding:10px 18px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:600;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+    white-space:nowrap;
+  }
+  .toast.show{ opacity:1; }
+  .helper{ font-size:12px; color:var(--muted); margin:-4px 0 14px; line-height:1.4; }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script type="text/babel">
+const { useState } = React;
+
+const LOCALES = [
+  "DRUGSTORE MITRE","DRUGSTORE TANDIL","DRUGSTORE CANEVA","DRUGSTORE IRIGOYEN",
+  "DRUGSTORE PERON","DRUGSTORE BURGOS","DRUGSTORE PIAZZA","DRUGSTORE HOSPITAL",
+  "DRUGSTORE SAN LUIS","DRUGSTORE JUJUY"
+];
+
+const ITEMS = [
+  { key: "stock", label: "Stock" },
+  { key: "limp_general", label: "Limpieza general" },
+  { key: "limp_heladeras", label: "Limpieza heladeras" },
+  { key: "limp_mostrador", label: "Limpieza mostrador" },
+  { key: "limp_freezer", label: "Limpieza freezer" },
+  { key: "rep_galletitas", label: "Reposición galletitas" },
+  { key: "rep_mostrador", label: "Reposición mostrador" },
+  { key: "rep_heladeras", label: "Reposición heladeras" },
+  { key: "rep_freezer", label: "Reposición freezer" },
+  { key: "growshop", label: "Growshop" },
+  { key: "cigarrillos", label: "Cigarrillos" },
+  { key: "deposito", label: "Depósito" },
+  { key: "cafetera", label: "Cafetera" },
+  { key: "snacks", label: "Snacks" },
+  { key: "uniforme", label: "Uniforme" },
+];
+
+const TURNOS = ["Mañana", "Tarde", "Noche"];
+
+function nowLabel(d){
+  return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit' }) + ' · ' +
+         d.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+}
+
+function buildWhatsAppText(v, forEncargados){
+  const d = new Date(v.fecha);
+  const lineas = ITEMS.map(i => {
+    const base = (v.checks[i.key] === 'ok' ? '✅ ' : '⚠️ ') + i.label;
+    const det = v.detalles[i.key];
+    return v.checks[i.key] === 'warn' && det ? base + ` — ${det}` : base;
+  });
+  let txt = `*${v.local}*\n${v.encargada} · ${nowLabel(d)}`;
+  txt += `\nTurno: ${v.turno}`;
+  if (v.turnoActualPersona || v.turnoAnterior || v.turnoDosAntes) {
+    txt += `\n\n👤 En este turno: ${v.turnoActualPersona || '-'}`;
+    txt += `\n👤 Turno anterior: ${v.turnoAnterior || '-'}`;
+    txt += `\n👤 Dos turnos antes: ${v.turnoDosAntes || '-'}`;
+  }
+  txt += `\n\n${lineas.join('\n')}`;
+  if (v.entradas && v.entradas.length > 0) {
+    v.entradas.forEach((e, idx) => {
+      txt += `\n\n📦 Entrada de mercadería${v.entradas.length > 1 ? ' ' + (idx + 1) : ''}`;
+      txt += `\nQué entró: ${e.que || '-'}`;
+      txt += `\nRecibió: ${e.quien || '-'}`;
+      txt += `\nCargado al sistema: ${e.cargado === 'si' ? 'Sí' : 'No ⚠️'}`;
+      if (e.cargado === 'no') {
+        if (e.obsCargado) txt += `\n  Observación: ${e.obsCargado}`;
+        if (e.tampocoCargadoPosterior) txt += `\n  ⚠️ Tampoco se cargó en turnos posteriores`;
+      }
+      txt += `\nVerificó precio: ${e.verificoPrecio === 'si' ? 'Sí' : 'No ⚠️'}`;
+      if (e.verificoPrecio === 'no') {
+        if (e.obsPrecio) txt += `\n  Observación: ${e.obsPrecio}`;
+        if (e.tampocoPrecioPosterior) txt += `\n  ⚠️ Tampoco se verificó en turnos posteriores`;
+      }
+    });
+  }
+
+  txt += `\n\n🏷️ Ofertas`;
+  if (v.ofertasHechas === 'si') {
+    txt += `\nHechas: ${v.ofertasCuales || '-'}`;
+  } else {
+    txt += `\nNo hechas ⚠️`;
+    txt += `\nTenían para hacer y no hicieron: ${v.ofertasPendientes || '-'}`;
+  }
+
+  txt += `\n\n📅 Mercadería vencida`;
+  if (v.hayVencidos === 'si') {
+    txt += `\n⚠️ Sí: ${v.vencidosQue || '-'}`;
+    txt += `\nSuma: $${v.vencidosMonto || '-'}`;
+  } else {
+    txt += `\nNo`;
+  }
+
+  if (v.nota) txt += `\n\n📝 ${v.nota}`;
+  if (forEncargados && v.notaEncargados) {
+    txt += `\n\n🔒 Observaciones (solo encargados)\n${v.notaEncargados}`;
+  }
+  return txt;
+}
+
+function whatsappLink(v, forEncargados){
+  return "https://wa.me/?text=" + encodeURIComponent(buildWhatsAppText(v, forEncargados));
+}
+
+function nuevaEntrada(){
+  return {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    que: '', quien: '',
+    cargado: 'si', obsCargado: '', tampocoCargadoPosterior: false,
+    verificoPrecio: 'si', obsPrecio: '', tampocoPrecioPosterior: false,
+  };
+}
+
+function App(){
+  const [tab, setTab] = useState('nueva');
+  const [local, setLocal] = useState(LOCALES[0]);
+  const [encargada, setEncargada] = useState('');
+  const [turno, setTurno] = useState(TURNOS[0]);
+  const [turnoActualPersona, setTurnoActualPersona] = useState('');
+  const [turnoAnterior, setTurnoAnterior] = useState('');
+  const [turnoDosAntes, setTurnoDosAntes] = useState('');
+  const [checks, setChecks] = useState(() => Object.fromEntries(ITEMS.map(i => [i.key, 'ok'])));
+  const [detalles, setDetalles] = useState({});
+  const [entradas, setEntradas] = useState([]);
+  const [ofertasHechas, setOfertasHechas] = useState('si');
+  const [ofertasCuales, setOfertasCuales] = useState('');
+  const [ofertasPendientes, setOfertasPendientes] = useState('');
+  const [hayVencidos, setHayVencidos] = useState('no');
+  const [vencidosQue, setVencidosQue] = useState('');
+  const [vencidosMonto, setVencidosMonto] = useState('');
+  const [nota, setNota] = useState('');
+  const [notaEncargados, setNotaEncargados] = useState('');
+  const [visitasHoy, setVisitasHoy] = useState([]);
+  const [toast, setToast] = useState('');
+  const [filtro, setFiltro] = useState('Todos');
+  const [lastSent, setLastSent] = useState(null);
+
+  function showToast(msg){
+    setToast(msg);
+    setTimeout(() => setToast(''), 2200);
+  }
+
+  function toggleCheck(key, val){
+    setChecks(prev => ({ ...prev, [key]: val }));
+    if (val === 'ok') {
+      setDetalles(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  }
+
+  function setDetalle(key, texto){
+    setDetalles(prev => ({ ...prev, [key]: texto }));
+  }
+
+  function addEntrada(){
+    setEntradas(prev => [...prev, nuevaEntrada()]);
+  }
+
+  function removeEntrada(id){
+    setEntradas(prev => prev.filter(e => e.id !== id));
+  }
+
+  function updateEntrada(id, field, value){
+    setEntradas(prev => prev.map(e => e.id === id ? { ...e, [field]: value } : e));
+  }
+
+  function enviar(){
+    if(!encargada.trim()){
+      showToast('Falta el nombre de la encargada');
+      return;
+    }
+    const registro = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      local,
+      encargada: encargada.trim(),
+      turno,
+      turnoActualPersona: turnoActualPersona.trim(),
+      turnoAnterior: turnoAnterior.trim(),
+      turnoDosAntes: turnoDosAntes.trim(),
+      fecha: new Date().toISOString(),
+      checks,
+      detalles,
+      entradas,
+      ofertasHechas,
+      ofertasCuales: ofertasCuales.trim(),
+      ofertasPendientes: ofertasPendientes.trim(),
+      hayVencidos,
+      vencidosQue: vencidosQue.trim(),
+      vencidosMonto: vencidosMonto.trim(),
+      nota: nota.trim(),
+      notaEncargados: notaEncargados.trim(),
+    };
+    setVisitasHoy(prev => [registro, ...prev]);
+    setLastSent(registro);
+    setNota('');
+    setNotaEncargados('');
+    setLocal(LOCALES[0]);
+    setEncargada('');
+    setTurnoActualPersona('');
+    setTurnoAnterior('');
+    setTurnoDosAntes('');
+    setChecks(Object.fromEntries(ITEMS.map(i => [i.key, 'ok'])));
+    setDetalles({});
+    setEntradas([]);
+    setOfertasHechas('si');
+    setOfertasCuales('');
+    setOfertasPendientes('');
+    setHayVencidos('no');
+    setVencidosQue('');
+    setVencidosMonto('');
+    showToast('Recorrido listo, elegí a quién enviarlo');
+  }
+
+  const visibles = filtro === 'Todos' ? visitasHoy : visitasHoy.filter(v => v.local === filtro);
+
+  return (
+    <>
+      <div className="topbar">
+        <p className="eyebrow">Recorrido diario</p>
+        <h1>Control de Kioscos</h1>
+      </div>
+
+      <div className="content">
+        {tab === 'nueva' && (
+          <>
+            {lastSent && (
+              <div className="card" style={{border:'1px solid var(--ok)', background:'#f3faf5'}}>
+                <label style={{color:'var(--ok)', marginBottom:0}}>Recorrido registrado, listo para enviar</label>
+                <p style={{fontSize:'13px', margin:'4px 0 0'}}>
+                  {lastSent.local} · {lastSent.encargada} — bajá hasta el final para mandarlo
+                </p>
+              </div>
+            )}
+            <div className="card">
+              <div className="field">
+                <label>Local</label>
+                <select value={local} onChange={e => setLocal(e.target.value)}>
+                  {LOCALES.map(l => <option key={l} value={l}>{l}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label>Encargada</label>
+                <input type="text" placeholder="Nombre" value={encargada}
+                  onChange={e => setEncargada(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="field">
+                <label>Turno actual</label>
+                <select value={turno} onChange={e => setTurno(e.target.value)}>
+                  {TURNOS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label>Quién está en este turno</label>
+                <input type="text" placeholder="Nombre" value={turnoActualPersona}
+                  onChange={e => setTurnoActualPersona(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Quién estuvo en el turno anterior</label>
+                <input type="text" placeholder="Nombre" value={turnoAnterior}
+                  onChange={e => setTurnoAnterior(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Quién estuvo dos turnos antes</label>
+                <input type="text" placeholder="Nombre" value={turnoDosAntes}
+                  onChange={e => setTurnoDosAntes(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="card">
+              <label style={{marginBottom:'2px'}}>Checklist</label>
+              <p className="helper">Tocá para marcar si está bien o si hay un problema.</p>
+              {ITEMS.map(item => (
+                <div key={item.key}>
+                  <div className="checklist-item">
+                    <span>{item.label}</span>
+                    <div className="toggle">
+                      <button
+                        className={checks[item.key] === 'ok' ? 'active ok' : ''}
+                        onClick={() => toggleCheck(item.key, 'ok')}>OK</button>
+                      <button
+                        className={checks[item.key] === 'warn' ? 'active warn' : ''}
+                        onClick={() => toggleCheck(item.key, 'warn')}>PROBLEMA</button>
+                    </div>
+                  </div>
+                  {checks[item.key] === 'warn' && (
+                    <input type="text" placeholder={`¿Cuál es el problema con ${item.label.toLowerCase()}?`}
+                      value={detalles[item.key] || ''}
+                      onChange={e => setDetalle(item.key, e.target.value)}
+                      style={{marginTop:'-6px', marginBottom:'12px', borderColor:'var(--warn)'}} />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="card">
+              <div className="checklist-item" style={{borderBottom: entradas.length > 0 ? '1px solid var(--line)' : 'none', paddingBottom: entradas.length > 0 ? '12px' : '4px'}}>
+                <span>Entrada de mercadería</span>
+                <div className="toggle">
+                  <button className={entradas.length === 0 ? 'active ok' : ''} onClick={() => setEntradas([])}>NO</button>
+                  <button className={entradas.length > 0 ? 'active warn' : ''} onClick={() => { if (entradas.length === 0) addEntrada(); }}>SÍ</button>
+                </div>
+              </div>
+
+              {entradas.map((e, idx) => (
+                <div key={e.id} style={{
+                  paddingTop:'14px', marginTop: idx === 0 ? '0' : '14px',
+                  borderTop: idx === 0 ? 'none' : '1px dashed var(--line)'
+                }}>
+                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'6px'}}>
+                    <label style={{margin:0}}>{entradas.length > 1 ? `Entrada ${idx + 1}` : 'Entrada'}</label>
+                    {entradas.length > 1 && (
+                      <button onClick={() => removeEntrada(e.id)}
+                        style={{border:'none', background:'none', color:'var(--warn)', fontSize:'12px', fontWeight:700, cursor:'pointer'}}>
+                        Quitar
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="field">
+                    <label>Qué entró</label>
+                    <input type="text" placeholder="Ej: cigarrillos, galletitas..." value={e.que}
+                      onChange={ev => updateEntrada(e.id, 'que', ev.target.value)} />
+                  </div>
+                  <div className="field">
+                    <label>Quién lo recibió</label>
+                    <input type="text" placeholder="Nombre" value={e.quien}
+                      onChange={ev => updateEntrada(e.id, 'quien', ev.target.value)} />
+                  </div>
+
+                  <div className="checklist-item" style={{borderBottom: e.cargado === 'no' ? '1px solid var(--line)' : 'none', padding: e.cargado === 'no' ? '0 0 12px' : '0'}}>
+                    <span>¿Se cargó al sistema?</span>
+                    <div className="toggle">
+                      <button className={e.cargado === 'si' ? 'active ok' : ''} onClick={() => updateEntrada(e.id, 'cargado', 'si')}>SÍ</button>
+                      <button className={e.cargado === 'no' ? 'active warn' : ''} onClick={() => updateEntrada(e.id, 'cargado', 'no')}>NO</button>
+                    </div>
+                  </div>
+                  {e.cargado === 'no' && (
+                    <div style={{marginTop:'12px'}}>
+                      <input type="text" placeholder="Observación: ¿por qué no se cargó?"
+                        value={e.obsCargado} onChange={ev => updateEntrada(e.id, 'obsCargado', ev.target.value)}
+                        style={{marginBottom:'10px', borderColor:'var(--warn)'}} />
+                      <label style={{display:'flex', alignItems:'center', gap:'8px', textTransform:'none', letterSpacing:'normal', fontWeight:500, fontSize:'13px', color:'var(--ink)'}}>
+                        <input type="checkbox" checked={e.tampocoCargadoPosterior}
+                          onChange={ev => updateEntrada(e.id, 'tampocoCargadoPosterior', ev.target.checked)}
+                          style={{width:'auto', marginBottom:0}} />
+                        Tampoco se cargó en turnos posteriores
+                      </label>
+                    </div>
+                  )}
+
+                  <div className="checklist-item" style={{borderTop:'1px solid var(--line)', marginTop:'12px', paddingTop:'12px', borderBottom: e.verificoPrecio === 'no' ? '1px solid var(--line)' : 'none', padding: e.verificoPrecio === 'no' ? '12px 0' : '12px 0 0'}}>
+                    <span>¿Se verificó precio?</span>
+                    <div className="toggle">
+                      <button className={e.verificoPrecio === 'si' ? 'active ok' : ''} onClick={() => updateEntrada(e.id, 'verificoPrecio', 'si')}>SÍ</button>
+                      <button className={e.verificoPrecio === 'no' ? 'active warn' : ''} onClick={() => updateEntrada(e.id, 'verificoPrecio', 'no')}>NO</button>
+                    </div>
+                  </div>
+                  {e.verificoPrecio === 'no' && (
+                    <div style={{marginTop:'12px'}}>
+                      <input type="text" placeholder="Observación sobre el precio"
+                        value={e.obsPrecio} onChange={ev => updateEntrada(e.id, 'obsPrecio', ev.target.value)}
+                        style={{marginBottom:'10px', borderColor:'var(--warn)'}} />
+                      <label style={{display:'flex', alignItems:'center', gap:'8px', textTransform:'none', letterSpacing:'normal', fontWeight:500, fontSize:'13px', color:'var(--ink)'}}>
+                        <input type="checkbox" checked={e.tampocoPrecioPosterior}
+                          onChange={ev => updateEntrada(e.id, 'tampocoPrecioPosterior', ev.target.checked)}
+                          style={{width:'auto', marginBottom:0}} />
+                        Tampoco se verificó en turnos posteriores
+                      </label>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {entradas.length > 0 && (
+                <button onClick={addEntrada} style={{
+                  marginTop:'14px', width:'100%', background:'none', border:'1px dashed var(--muted)',
+                  borderRadius:'10px', padding:'10px', fontSize:'13px', fontWeight:700, color:'var(--muted)',
+                  fontFamily:'var(--font-body)', cursor:'pointer'
+                }}>+ Agregar otra entrada</button>
+              )}
+            </div>
+
+            <div className="card">
+              <div className="checklist-item" style={{borderBottom:'1px solid var(--line)', paddingBottom:'12px'}}>
+                <span>¿Hay ofertas hechas?</span>
+                <div className="toggle">
+                  <button className={ofertasHechas === 'si' ? 'active ok' : ''} onClick={() => setOfertasHechas('si')}>SÍ</button>
+                  <button className={ofertasHechas === 'no' ? 'active warn' : ''} onClick={() => setOfertasHechas('no')}>NO</button>
+                </div>
+              </div>
+              <div style={{paddingTop:'12px'}}>
+                {ofertasHechas === 'si' ? (
+                  <div className="field">
+                    <label>¿Cuáles?</label>
+                    <input type="text" placeholder="Ej: 2x1 gaseosas, combo alfajor+café..."
+                      value={ofertasCuales} onChange={e => setOfertasCuales(e.target.value)} />
+                  </div>
+                ) : (
+                  <div className="field">
+                    <label>¿Cuáles tenían para hacer y no hicieron?</label>
+                    <input type="text" placeholder="Ej: la de snacks que se armó ayer..."
+                      value={ofertasPendientes} onChange={e => setOfertasPendientes(e.target.value)} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="checklist-item" style={{borderBottom: hayVencidos === 'si' ? '1px solid var(--line)' : 'none', paddingBottom: hayVencidos === 'si' ? '12px' : '4px'}}>
+                <span>¿Hay mercadería vencida?</span>
+                <div className="toggle">
+                  <button className={hayVencidos === 'no' ? 'active ok' : ''} onClick={() => setHayVencidos('no')}>NO</button>
+                  <button className={hayVencidos === 'si' ? 'active warn' : ''} onClick={() => setHayVencidos('si')}>SÍ</button>
+                </div>
+              </div>
+              {hayVencidos === 'si' && (
+                <div style={{paddingTop:'12px'}}>
+                  <div className="field">
+                    <label>Qué</label>
+                    <input type="text" placeholder="Ej: yogures, fiambres..."
+                      value={vencidosQue} onChange={e => setVencidosQue(e.target.value)} />
+                  </div>
+                  <div className="field">
+                    <label>Cuánto suma ($)</label>
+                    <input type="text" inputMode="numeric" placeholder="Ej: 8500"
+                      value={vencidosMonto} onChange={e => setVencidosMonto(e.target.value)} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="card">
+              <label>Notas del recorrido</label>
+              <textarea placeholder="Lo que quieras dejar anotado sobre esta visita..."
+                value={nota} onChange={e => setNota(e.target.value)} />
+            </div>
+
+            <div className="card" style={{border:'1px solid var(--ink)'}}>
+              <label>🔒 Observaciones (solo para encargados)</label>
+              <p className="helper">Esto no se manda al grupo del local, solo al de encargados.</p>
+              <textarea placeholder="Lo que quieras dejar solo para encargados..."
+                value={notaEncargados} onChange={e => setNotaEncargados(e.target.value)} />
+            </div>
+
+            <button className="btn-primary" style={{marginBottom:'10px'}} onClick={enviar}>
+              Registrar recorrido
+            </button>
+
+            {lastSent && (
+              <>
+                <a href={whatsappLink(lastSent, false)} target="_blank" rel="noopener noreferrer" style={{textDecoration:'none'}}>
+                  <button className="btn-primary" style={{background:'#25D366', marginBottom:'10px'}}>
+                    Enviar al grupo del local
+                  </button>
+                </a>
+                <a href={whatsappLink(lastSent, true)} target="_blank" rel="noopener noreferrer" style={{textDecoration:'none'}}>
+                  <button className="btn-primary" style={{background:'#128C7E'}}>
+                    Enviar a encargados
+                  </button>
+                </a>
+              </>
+            )}
+          </>
+        )}
+
+        {tab === 'historial' && (
+          <>
+            <div className="card filter-row">
+              <label>Filtrar por local</label>
+              <select value={filtro} onChange={e => setFiltro(e.target.value)}>
+                <option value="Todos">Todos los locales</option>
+                {LOCALES.map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+            <p className="helper" style={{margin:'-8px 0 12px'}}>Esta lista es de esta sesión en este celular, no queda guardada al cerrar la app. El registro real queda en el grupo de WhatsApp.</p>
+
+            {visibles.length === 0 && (
+              <div className="empty">Todavía no enviaste ningún recorrido en esta sesión.</div>
+            )}
+
+            {visibles.map(v => {
+              const d = new Date(v.fecha);
+              const problemas = ITEMS.filter(i => v.checks[i.key] === 'warn');
+              return (
+                <div className="card hist-card" key={v.id}>
+                  <div className="hist-head">
+                    <span className="hist-local">{v.local}</span>
+                    <span className="hist-date">{nowLabel(d)}</span>
+                  </div>
+                  <div className="hist-encargada">{v.encargada} · Turno {v.turno}</div>
+                  <div className="chip-row">
+                    {ITEMS.map(i => (
+                      <span key={i.key} className={"chip " + (v.checks[i.key] === 'ok' ? 'ok' : 'warn')}>
+                        {i.label}
+                      </span>
+                    ))}
+                  </div>
+                  {problemas.length > 0 && (
+                    <div className="hist-note">
+                      {problemas.map(p => (
+                        <div key={p.key}>⚠️ {p.label}{v.detalles[p.key] ? `: ${v.detalles[p.key]}` : ''}</div>
+                      ))}
+                    </div>
+                  )}
+                  {v.nota && <div className="hist-note" style={{marginTop:'8px'}}>{v.nota}</div>}
+                  {v.entradas && v.entradas.map((e, idx) => (
+                    <div className="hist-note" style={{marginTop:'8px'}} key={idx}>
+                      📦 {e.que || '-'} · Recibió: {e.quien || '-'} · Cargado: {e.cargado === 'si' ? 'Sí' : 'No ⚠️'} · Precio: {e.verificoPrecio === 'si' ? 'Sí' : 'No ⚠️'}
+                    </div>
+                  ))}
+                  <div className="hist-note" style={{marginTop:'8px'}}>
+                    🏷️ Ofertas: {v.ofertasHechas === 'si' ? (v.ofertasCuales || '-') : `No hechas ⚠️ — pendientes: ${v.ofertasPendientes || '-'}`}
+                  </div>
+                  {v.hayVencidos === 'si' && (
+                    <div className="hist-note" style={{marginTop:'8px'}}>
+                      📅 Vencidos: {v.vencidosQue || '-'} · ${v.vencidosMonto || '-'}
+                    </div>
+                  )}
+                  <a href={whatsappLink(v, false)} target="_blank" rel="noopener noreferrer" style={{textDecoration:'none'}}>
+                    <button style={{
+                      marginTop:'10px', width:'100%', background:'#25D366', color:'#fff', border:'none',
+                      borderRadius:'10px', padding:'9px', fontSize:'13px', fontWeight:'700',
+                      fontFamily:'var(--font-body)', cursor:'pointer'
+                    }}>Reenviar al grupo del local</button>
+                  </a>
+                  <a href={whatsappLink(v, true)} target="_blank" rel="noopener noreferrer" style={{textDecoration:'none'}}>
+                    <button style={{
+                      marginTop:'8px', width:'100%', background:'#128C7E', color:'#fff', border:'none',
+                      borderRadius:'10px', padding:'9px', fontSize:'13px', fontWeight:'700',
+                      fontFamily:'var(--font-body)', cursor:'pointer'
+                    }}>Reenviar a encargados</button>
+                  </a>
+                </div>
+              );
+            })}
+          </>
+        )}
+      </div>
+
+      <div className={"toast" + (toast ? " show" : "")}>{toast}</div>
+
+      <div className="tabbar">
+        <button className={tab === 'nueva' ? 'active' : ''} onClick={() => setTab('nueva')}>Nueva visita</button>
+        <button className={tab === 'historial' ? 'active' : ''} onClick={() => setTab('historial')}>Hoy</button>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app-root')).render(<App />);
+</script>
