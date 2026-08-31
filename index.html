@@ -1,3 +1,11 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Kioscos</title>
+</head>
+<body>
 <div id="app-root"></div>
 <style>
   :root{
@@ -207,11 +215,7 @@
 <script type="text/babel">
 const { useState } = React;
 
-const LOCALES = [
-  "DRUGSTORE MITRE","DRUGSTORE TANDIL","DRUGSTORE CANEVA","DRUGSTORE IRIGOYEN",
-  "DRUGSTORE PERON","DRUGSTORE BURGOS","DRUGSTORE PIAZZA","DRUGSTORE HOSPITAL",
-  "DRUGSTORE SAN LUIS","DRUGSTORE JUJUY"
-];
+const LOCALES = ["25 Y TANDIL","SAN LUIS","BURGOS","CANEVA","IRIGOYEN","MITRE","PERON","PIAZZA","A. DIAB"];
 
 const ITEMS = [
   { key: "stock", label: "Stock" },
@@ -229,6 +233,15 @@ const ITEMS = [
   { key: "cafetera", label: "Cafetera" },
   { key: "snacks", label: "Snacks" },
   { key: "uniforme", label: "Uniforme" },
+];
+
+const ITEMS_EVAL = [
+  { key: "horario", label: "Llegó a horario" },
+  { key: "uniforme_ok", label: "Uniforme correcto" },
+  { key: "atencion", label: "Atención al cliente" },
+  { key: "conocimiento", label: "Maneja bien el sistema/checklist" },
+  { key: "actitud", label: "Actitud y predisposición" },
+  { key: "orden_turno", label: "Cómo tiene su turno" },
 ];
 
 const TURNOS = ["Mañana", "Tarde", "Noche"];
@@ -298,6 +311,34 @@ function whatsappLink(v, forEncargados){
   return "https://wa.me/?text=" + encodeURIComponent(buildWhatsAppText(v, forEncargados));
 }
 
+function buildEvalText(v){
+  const d = new Date(v.fecha);
+  const lineas = ITEMS_EVAL.map(i => {
+    const base = (v.evalChecks[i.key] === 'ok' ? '✅ ' : '⚠️ ') + i.label;
+    const det = v.evalDetalles[i.key];
+    return v.evalChecks[i.key] === 'warn' && det ? base + ` — ${det}` : base;
+  });
+  let txt = `*Seguimiento — ${v.turnoActualPersona || 'sin nombre'}*\n${v.local} · Turno ${v.turno} · ${nowLabel(d)}`;
+  txt += `\nControl realizado por: ${v.encargada}`;
+  txt += `\n\n${lineas.join('\n')}`;
+
+  txt += `\n\n📌 ¿Se le asignó tarea? ${v.tareaAsignada === 'si' ? 'Sí' : 'No'}`;
+  if (v.tareaAsignada === 'si') txt += `\nCuál: ${v.tareaCual || '-'}`;
+
+  txt += `\n\n📌 ¿Tenía asignación anterior? ${v.asignacionAnterior === 'si' ? 'Sí' : 'No'}`;
+  if (v.asignacionAnterior === 'si') {
+    txt += `\nCuál: ${v.asignacionAnteriorCual || '-'}`;
+    txt += `\n¿La hizo? ${v.asignacionAnteriorHizo === 'si' ? 'Sí' : 'No ⚠️'}`;
+  }
+
+  if (v.evalComentario) txt += `\n\n📝 ${v.evalComentario}`;
+  return txt;
+}
+
+function evalWhatsappLink(v){
+  return "https://wa.me/?text=" + encodeURIComponent(buildEvalText(v));
+}
+
 function nuevaEntrada(){
   return {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
@@ -326,6 +367,14 @@ function App(){
   const [vencidosMonto, setVencidosMonto] = useState('');
   const [nota, setNota] = useState('');
   const [notaEncargados, setNotaEncargados] = useState('');
+  const [evalChecks, setEvalChecks] = useState(() => Object.fromEntries(ITEMS_EVAL.map(i => [i.key, 'ok'])));
+  const [evalDetalles, setEvalDetalles] = useState({});
+  const [evalComentario, setEvalComentario] = useState('');
+  const [tareaAsignada, setTareaAsignada] = useState('no');
+  const [tareaCual, setTareaCual] = useState('');
+  const [asignacionAnterior, setAsignacionAnterior] = useState('no');
+  const [asignacionAnteriorCual, setAsignacionAnteriorCual] = useState('');
+  const [asignacionAnteriorHizo, setAsignacionAnteriorHizo] = useState('si');
   const [visitasHoy, setVisitasHoy] = useState([]);
   const [toast, setToast] = useState('');
   const [filtro, setFiltro] = useState('Todos');
@@ -363,6 +412,21 @@ function App(){
     setEntradas(prev => prev.map(e => e.id === id ? { ...e, [field]: value } : e));
   }
 
+  function toggleEvalCheck(key, val){
+    setEvalChecks(prev => ({ ...prev, [key]: val }));
+    if (val === 'ok') {
+      setEvalDetalles(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  }
+
+  function setEvalDetalle(key, texto){
+    setEvalDetalles(prev => ({ ...prev, [key]: texto }));
+  }
+
   function enviar(){
     if(!encargada.trim()){
       showToast('Falta el nombre de la encargada');
@@ -388,11 +452,27 @@ function App(){
       vencidosMonto: vencidosMonto.trim(),
       nota: nota.trim(),
       notaEncargados: notaEncargados.trim(),
+      evalChecks,
+      evalDetalles,
+      evalComentario: evalComentario.trim(),
+      tareaAsignada,
+      tareaCual: tareaCual.trim(),
+      asignacionAnterior,
+      asignacionAnteriorCual: asignacionAnteriorCual.trim(),
+      asignacionAnteriorHizo,
     };
     setVisitasHoy(prev => [registro, ...prev]);
     setLastSent(registro);
     setNota('');
     setNotaEncargados('');
+    setEvalChecks(Object.fromEntries(ITEMS_EVAL.map(i => [i.key, 'ok'])));
+    setEvalDetalles({});
+    setEvalComentario('');
+    setTareaAsignada('no');
+    setTareaCual('');
+    setAsignacionAnterior('no');
+    setAsignacionAnteriorCual('');
+    setAsignacionAnteriorHizo('si');
     setLocal(LOCALES[0]);
     setEncargada('');
     setTurnoActualPersona('');
@@ -466,6 +546,71 @@ function App(){
                 <input type="text" placeholder="Nombre" value={turnoDosAntes}
                   onChange={e => setTurnoDosAntes(e.target.value)} />
               </div>
+            </div>
+
+            <div className="card" style={{border:'1px solid var(--accent)'}}>
+              <label style={{marginBottom:'2px'}}>
+                Seguimiento de {turnoActualPersona.trim() || 'quien está en este turno'}
+              </label>
+              <p className="helper">Esto se manda directo a esa persona, no al grupo del local.</p>
+              {ITEMS_EVAL.map(item => (
+                <div key={item.key}>
+                  <div className="checklist-item">
+                    <span>{item.label}</span>
+                    <div className="toggle">
+                      <button className={evalChecks[item.key] === 'ok' ? 'active ok' : ''}
+                        onClick={() => toggleEvalCheck(item.key, 'ok')}>OK</button>
+                      <button className={evalChecks[item.key] === 'warn' ? 'active warn' : ''}
+                        onClick={() => toggleEvalCheck(item.key, 'warn')}>A MEJORAR</button>
+                    </div>
+                  </div>
+                  {evalChecks[item.key] === 'warn' && (
+                    <input type="text" placeholder={`¿Qué pasó con "${item.label.toLowerCase()}"?`}
+                      value={evalDetalles[item.key] || ''} onChange={e => setEvalDetalle(item.key, e.target.value)}
+                      style={{marginTop:'-6px', marginBottom:'12px', borderColor:'var(--warn)'}} />
+                  )}
+                </div>
+              ))}
+              <div className="field" style={{marginTop:'4px'}}>
+                <label>Comentario para esta persona</label>
+                <textarea placeholder="Algo puntual que quieras decirle..." value={evalComentario}
+                  onChange={e => setEvalComentario(e.target.value)} />
+              </div>
+
+              <div className="checklist-item" style={{borderTop:'1px solid var(--line)', marginTop:'4px', paddingTop:'12px', borderBottom: tareaAsignada === 'si' ? '1px solid var(--line)' : 'none', padding: tareaAsignada === 'si' ? '12px 0' : '12px 0 0'}}>
+                <span>¿Se le asignó tarea?</span>
+                <div className="toggle">
+                  <button className={tareaAsignada === 'no' ? 'active ok' : ''} onClick={() => setTareaAsignada('no')}>NO</button>
+                  <button className={tareaAsignada === 'si' ? 'active warn' : ''} onClick={() => setTareaAsignada('si')}>SÍ</button>
+                </div>
+              </div>
+              {tareaAsignada === 'si' && (
+                <input type="text" placeholder="¿Cuál tarea?"
+                  value={tareaCual} onChange={e => setTareaCual(e.target.value)}
+                  style={{marginTop:'12px', marginBottom:'0'}} />
+              )}
+
+              <div className="checklist-item" style={{borderTop:'1px solid var(--line)', marginTop:'12px', paddingTop:'12px', borderBottom: asignacionAnterior === 'si' ? '1px solid var(--line)' : 'none', padding: asignacionAnterior === 'si' ? '12px 0' : '12px 0 0'}}>
+                <span>¿Tenía asignación anterior?</span>
+                <div className="toggle">
+                  <button className={asignacionAnterior === 'no' ? 'active ok' : ''} onClick={() => setAsignacionAnterior('no')}>NO</button>
+                  <button className={asignacionAnterior === 'si' ? 'active warn' : ''} onClick={() => setAsignacionAnterior('si')}>SÍ</button>
+                </div>
+              </div>
+              {asignacionAnterior === 'si' && (
+                <div style={{marginTop:'12px'}}>
+                  <input type="text" placeholder="¿Cuál era?"
+                    value={asignacionAnteriorCual} onChange={e => setAsignacionAnteriorCual(e.target.value)}
+                    style={{marginBottom:'12px'}} />
+                  <div className="checklist-item" style={{borderBottom:'none', padding:'0'}}>
+                    <span>¿La hizo?</span>
+                    <div className="toggle">
+                      <button className={asignacionAnteriorHizo === 'si' ? 'active ok' : ''} onClick={() => setAsignacionAnteriorHizo('si')}>SÍ</button>
+                      <button className={asignacionAnteriorHizo === 'no' ? 'active warn' : ''} onClick={() => setAsignacionAnteriorHizo('no')}>NO</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="card">
@@ -656,8 +801,13 @@ function App(){
                   </button>
                 </a>
                 <a href={whatsappLink(lastSent, true)} target="_blank" rel="noopener noreferrer" style={{textDecoration:'none'}}>
-                  <button className="btn-primary" style={{background:'#128C7E'}}>
+                  <button className="btn-primary" style={{background:'#128C7E', marginBottom:'10px'}}>
                     Enviar a encargados
+                  </button>
+                </a>
+                <a href={evalWhatsappLink(lastSent)} target="_blank" rel="noopener noreferrer" style={{textDecoration:'none'}}>
+                  <button className="btn-primary" style={{background:'var(--accent)'}}>
+                    Enviar seguimiento a {lastSent.turnoActualPersona || 'la persona'}
                   </button>
                 </a>
               </>
@@ -751,3 +901,5 @@ function App(){
 
 ReactDOM.createRoot(document.getElementById('app-root')).render(<App />);
 </script>
+</body>
+</html>
