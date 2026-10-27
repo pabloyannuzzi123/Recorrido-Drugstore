@@ -360,7 +360,7 @@ $('np-ok').onclick=()=>{const n=$('np-nom').value.trim().toUpperCase();if(!n){$(
 function updateSave(){const n=dirtyW.size+(dirtyCfg?1:0);$('savebar').hidden=!n;
   $('sb-t').textContent=n?(dirtyW.size?dirtyW.size+(dirtyW.size===1?' semana con cambios':' semanas con cambios'):'')+(dirtyCfg?(dirtyW.size?' · ':'')+'personal modificado':''):''}
 $('sb-ok').onclick=async()=>{$('sb-ok').disabled=true;$('sb-msg').textContent='Guardando…';
-  try{if(dirtyCfg){await apiPut('horcfg','general',CFG);dirtyCfg=false;cfgSaved=true}
+  try{if(dirtyCfg||!cfgSaved){await apiPut('horcfg','general',CFG);dirtyCfg=false;cfgSaved=true}
     for(const w of [...dirtyW]){await apiPut('horarios',w,{id:w,asig:SEM[w].asig,actualizado:new Date().toISOString(),por:QUIEN});orig[w]=JSON.parse(JSON.stringify(SEM[w]));dirtyW.delete(w)}
     $('sb-msg').textContent='';updateSave();renderAll();$('status').textContent='Guardado a las '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}
   catch(e){$('sb-msg').textContent=e.message==='clave'?'La clave de horarios no es correcta. Volvé a entrar como administrador.':'No se pudo guardar. Revisá internet y probá de nuevo.'}
