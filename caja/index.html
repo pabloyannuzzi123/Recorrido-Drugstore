@@ -635,8 +635,11 @@ function horDia(f){const w=DB.horarios[lunesH(f)];if(!w)return null;const i=(toD
   LOCALES.forEach(l=>['m','t','n'].forEach(t=>{const n=(((w.asig||{})[l.id]||{})[t]||[])[i];if(n&&n!=='A CUBRIR')out.push({n,l:l.id,t,h:hTurno(l.id,t,f)})}));return out}
 const horPers=()=>(DB.horcfg&&DB.horcfg.personal)||[];
 const horTipo=n=>(horPers().find(p=>p.nombre===n)||{}).tipo;
+const FR_DEF=['ESTEBAN','GONZALO','TIZIANO','ENZO','MARCOS','BRISA','PALOMA','CAMI G'];
+function esFranq(n){const t=horTipo(n);if(t)return t==='franquero';const e=empByHor(n);if(e)return e.tipo==='Franquero';return FR_DEF.includes(n)}
 const niceH=n=>String(n).toLowerCase().replace(/(^|[\s.])([a-záéíóúñ])/g,(m,a,b)=>a+b.toUpperCase());
-function horNameOf(e){if(e.horNombre)return e.horNombre;const P=horPers().map(p=>p.nombre),a=(e.nombre||'').toUpperCase().trim(),b=(e.apellido||'').toUpperCase().trim();
+function horNombres(){const S=new Set(horPers().map(p=>p.nombre));Object.values(DB.horarios).forEach(w=>Object.values(w.asig||{}).forEach(o=>Object.values(o||{}).forEach(r=>(r||[]).forEach(n=>{if(n&&n!=='A CUBRIR')S.add(n)}))));return[...S]}
+function horNameOf(e){if(e.horNombre)return e.horNombre;const P=horNombres(),a=(e.nombre||'').toUpperCase().trim(),b=(e.apellido||'').toUpperCase().trim();
   return[a,a+' '+b.slice(0,1),a+'.'+b.slice(0,1),a+' '+b].find(x=>P.includes(x))||''}
 const empByHor=n=>Object.values(DB.empleados).find(e=>(!e.baja||e.baja>=hoyISO())&&horNameOf(e)===n);
 function horMes(e,m){const n=horNameOf(e);if(!n)return null;const hoy=hoyISO();let dias=0,hs=0,dH=0,hH=0,hay=false;
@@ -651,10 +654,12 @@ const FRQ_OPTS=sel=>'<option value="">—</option>'+Object.values(DB.empleados||
 const empN=id=>{const e=(DB.empleados||{})[id];return e?(e.nombre+' '+(e.apellido||'')).trim():'—'};
 const provName=id=>((DB.proveedores||{})[id]||{}).nombre||'Proveedor';
 function normDia(d){
-  d={...d};d.frq=d.frq||{};d.frq2=d.frq2||{};d.hf1=d.hf1||{};d.hf2=d.hf2||{};d.arq=d.arq||{};d.rec=d.rec||{};d.horas=d.horas||{};d.horasFr=d.horasFr||{};d.nota=d.nota||'';
+  d={...d};d.frq=d.frq||{};d.frq2=d.frq2||{};d.hf1=d.hf1||{};d.hf2=d.hf2||{};d.fq=d.fq||{};d.fh=d.fh||{};d.arq=d.arq||{};d.rec=d.rec||{};d.horas=d.horas||{};d.horasFr=d.horasFr||{};d.nota=d.nota||'';
+  // días guardados con el formato anterior (franquero 1 y 2)
+  LOCALES.forEach(l=>{if(!d.fq[l.id]&&(d.frq[l.id]||d.frq2[l.id]||d.horasFr[l.id])){d.fq[l.id]={m:d.frq[l.id]||''};d.fh[l.id]={m:d.hf1[l.id]??d.horasFr[l.id]??0};if(d.frq2[l.id]||d.hf2[l.id]){d.fq[l.id].t=d.frq2[l.id]||'';d.fh[l.id].t=d.hf2[l.id]||0}}});
   if(!d.movs){d.movs=(d.pagos||[]).map(p=>({id:uid('m'),clase:'pago',origen:p.medio==='Virtual'?'banco':'general',destino:'',cat:p.tipo==='Gasto general'?'Gasto general':p.tipo,local:p.local||'',detalle:p.detalle||'',monto:p.monto||0}))}
   delete d.pagos;return d}
-function blank(f){return{fecha:f,mes:f.slice(0,7),rec:{},horas:{},horasFr:{},frq:{},frq2:{},hf1:{},hf2:{},movs:[],arq:{},nota:''}}
+function blank(f){return{fecha:f,mes:f.slice(0,7),rec:{},horas:{},horasFr:{},frq:{},frq2:{},hf1:{},hf2:{},fq:{},fh:{},movs:[],arq:{},nota:''}}
 
 /* calcula lo que hace un día en cada caja */
 function diaCalc(d){
@@ -721,8 +726,9 @@ function buildDay(){
     rb.appendChild(tr);tr.querySelector('#ef-'+l.id).value=fmtIn(r.ef);tr.querySelector('#vi-'+l.id).value=fmtIn(r.vi);
     const hs=state.horas[l.id]??horasDefault(l.g,state.fecha);
     const ts=document.createElement('tr');
-    ts.innerHTML=`<td class="loc">${l.n}</td><td class="num"><input class="f hrs" id="hs-${l.id}" inputmode="decimal"></td><td><span class="row" style="flex-wrap:nowrap"><select class="f" id="fq-${l.id}" style="min-width:110px" aria-label="Franquero 1">${FRQ_OPTS(state.frq[l.id])}</select><input class="f hrs" id="hf-${l.id}" inputmode="decimal" placeholder="0" aria-label="Horas franquero 1"></span></td><td><span class="row" style="flex-wrap:nowrap"><select class="f" id="fq2-${l.id}" style="min-width:110px" aria-label="Franquero 2">${FRQ_OPTS(state.frq2[l.id])}</select><input class="f hrs" id="hf2-${l.id}" inputmode="decimal" placeholder="0" aria-label="Horas franquero 2"></span></td><td class="num" id="fr-${l.id}"></td><td class="num" id="bo-${l.id}"></td>`;
-    sb.appendChild(ts);ts.querySelector('#hs-'+l.id).value=String(hs).replace('.',',');const h1=state.hf1[l.id]??state.horasFr[l.id],h2=state.hf2[l.id];ts.querySelector('#hf-'+l.id).value=h1?String(h1).replace('.',','):'';ts.querySelector('#hf2-'+l.id).value=h2?String(h2).replace('.',','):'';});
+    ts.innerHTML=`<td class="loc">${l.n}</td><td class="num"><input class="f hrs" id="hs-${l.id}" inputmode="decimal"></td>`+['m','t','n'].map(t=>`<td><span class="row" style="flex-wrap:nowrap"><select class="f" id="fq-${l.id}-${t}" style="min-width:104px" aria-label="Franquero ${t}">${FRQ_OPTS((state.fq[l.id]||{})[t])}</select><input class="f hrs" id="fh-${l.id}-${t}" inputmode="decimal" placeholder="0" style="max-width:62px" aria-label="Horas"></span></td>`).join('')+`<td class="num" id="fr-${l.id}"></td><td class="num" id="bo-${l.id}"></td>`;
+    sb.appendChild(ts);ts.querySelector('#hs-'+l.id).value=String(hs).replace('.',',');['m','t','n'].forEach(t=>{const h=(state.fh[l.id]||{})[t];ts.querySelector(`#fh-${l.id}-${t}`).value=h?String(h).replace('.',','):'';
+      ts.querySelector(`#fq-${l.id}-${t}`).addEventListener('change',e=>{const hi=ts.querySelector(`#fh-${l.id}-${t}`);if(e.target.value&&!parse(hi.value))hi.value=String(hTurno(l.id,t,state.fecha)).replace('.',',');if(!e.target.value)hi.value='';readDay()})})});
   rb.querySelectorAll('input').forEach(i=>{i.addEventListener('input',readDay);i.addEventListener('blur',()=>{i.value=fmtIn(parse(i.value))})});
   sb.querySelectorAll('input,select').forEach(i=>i.addEventListener('input',readDay));
   const ab=$('arq-body');ab.innerHTML='';
@@ -749,7 +755,7 @@ function buildMovs(){
   $('movs-count').textContent=state.movs.length?state.movs.length+(state.movs.length===1?' movimiento':' movimientos'):'';
 }
 function readDay(){LOCALES.forEach(l=>{state.rec[l.id]={ef:parse($('ef-'+l.id).value),vi:parse($('vi-'+l.id).value)};
-  state.horas[l.id]=parse($('hs-'+l.id).value);state.hf1[l.id]=parse($('hf-'+l.id).value);state.hf2[l.id]=parse($('hf2-'+l.id).value);state.horasFr[l.id]=state.hf1[l.id]+state.hf2[l.id];state.frq[l.id]=$('fq-'+l.id).value;state.frq2[l.id]=$('fq2-'+l.id).value});
+  state.horas[l.id]=parse($('hs-'+l.id).value);state.fq[l.id]={};state.fh[l.id]={};let tot=0;['m','t','n'].forEach(t=>{const e=$(`fq-${l.id}-${t}`).value,h=parse($(`fh-${l.id}-${t}`).value);if(e||h){state.fq[l.id][t]=e;state.fh[l.id][t]=h;tot+=h}});state.horasFr[l.id]=tot});
   const arq={};document.querySelectorAll('[data-arq]').forEach(i=>{if(i.value.trim()!=='')arq[i.dataset.arq]={contado:parse(i.value)}});state.arq=arq;
   state.nota=$('nota').value;markDirty();calc()}
 function calc(){
@@ -797,10 +803,11 @@ function setDayState(){$('dayname').textContent=DIAS[toDate(state.fecha).getUTCD
   const ex=!!DB.dias[state.fecha];$('daystate').textContent=ex?(state.fecha<hoyISO()?'Cerrado':'Guardado'):'Sin cargar';$('daystate').className='pill'+(ex?'':' warn');lockState()}
 function openDay(f){$('fecha').value=f;const d=DB.dias[f];state=d?normDia(JSON.parse(JSON.stringify(d))):blank(f);
   let notaH='';const L=horDia(f);
-  if(!d&&L){const partes=[];LOCALES.forEach(l=>{const fr=L.filter(x=>x.l===l.id&&horTipo(x.n)==='franquero');if(!fr.length)return;
-      state.horasFr[l.id]=fr.reduce((a,x)=>a+x.h,0);const e=empByHor(fr[0].n);state.frq[l.id]=e?e.id:'';state.hf1[l.id]=fr[0].h;
-      const fr2=fr.slice(1);if(fr2.length){const e2=empByHor(fr2[0].n);state.frq2[l.id]=e2?e2.id:'';state.hf2[l.id]=fr2.reduce((a,x)=>a+x.h,0)}
-      partes.push(fr.map(x=>niceH(x.n)).join(' y ')+' en '+l.n+' ('+String(state.horasFr[l.id]).replace('.',',')+' hs)'+(e?'':' · no está en Empleados'))});
+  if(!d&&L){const partes=[],faltan=new Set();LOCALES.forEach(l=>{const fr=L.filter(x=>x.l===l.id&&esFranq(x.n));if(!fr.length)return;
+      state.fq[l.id]={};state.fh[l.id]={};fr.forEach(x=>{const e=empByHor(x.n);if(!e)faltan.add(niceH(x.n));state.fq[l.id][x.t]=e?e.id:'';state.fh[l.id][x.t]=x.h});
+      state.horasFr[l.id]=fr.reduce((a,x)=>a+x.h,0);
+      partes.push(l.n+': '+fr.map(x=>niceH(x.n)+' ('+{m:'mañana',t:'tarde',n:'noche'}[x.t]+')').join(', '))});
+    if(faltan.size)partes.push('Para que se les registre el pago, cargá en Empleados a: '+[...faltan].join(', '));
     notaH=partes.length?'Completado según el horario: '+partes.join(' · ')+'. Si alguien faltó o cambió, corregilo acá.':'Según el horario, hoy no trabaja ningún franquero.'}
   else if(!d&&!L)notaH='La semana no tiene horario cargado en la app de Horarios: completá a mano las horas de franqueros.';
   $('su-hor').textContent=notaH;$('su-hor').hidden=!notaH;
@@ -1022,9 +1029,8 @@ function renderEmpleados(){
   $('e-lista').querySelectorAll('[data-eed]').forEach(b=>b.onclick=()=>editEmp(b.dataset.eed));renderSueldos()}
 let emMes=hoyISO().slice(0,7);
 function adelMes(id,m){return Object.values(DB.adelantos).filter(x=>x.emp===id&&x.fecha.slice(0,7)===m)}
-function frMes(id,m){let dias=0,hs=0,cob=0;Object.values(DB.dias).forEach(d=>{if(d.fecha.slice(0,7)!==m)return;const vh=d.vh||VH;let any=false;
-  Object.entries(d.frq||{}).forEach(([L,e])=>{if(e===id){const h=(d.hf1||{})[L]??((d.horasFr||{})[L]||0);if(h){hs+=h;cob+=h*vh;any=true}}});
-  Object.entries(d.frq2||{}).forEach(([L,e])=>{if(e===id){const h=(d.hf2||{})[L]||0;if(h){hs+=h;cob+=h*vh;any=true}}});if(any)dias++});return{dias,hs,cob}}
+function frMes(id,m){let dias=0,hs=0,cob=0;Object.values(DB.dias).forEach(d0=>{if(d0.fecha.slice(0,7)!==m)return;const d=normDia(d0),vh=d.vh||VH;let any=false;
+  Object.entries(d.fq).forEach(([L,o])=>Object.entries(o||{}).forEach(([t,e])=>{if(e===id){const h=((d.fh||{})[L]||{})[t]||0;if(h){hs+=h;cob+=h*vh;any=true}}}));if(any)dias++});return{dias,hs,cob}}
 function frRes(e,m){const c=frMes(e.id,m),hm=horMes(e,m),ad=adelMes(e.id,m).reduce((t,y)=>t+y.monto,0);
   const dias=hm?hm.dH:c.dias,hs=hm?hm.hH:c.hs,corr=hm?hm.hH*VH:c.cob;return{hm,dias,hs,corr,cob:c.cob,ad,falta:corr-c.cob-ad}}
 function adelForm(id){const e=DB.empleados[id],o=e.local?'bol:'+e.local:'general';
@@ -1065,7 +1071,7 @@ function msgFranquero(e,m,x){
   return `Hola ${e.nombre}! Resumen de ${mesT(m)}:\n• Días trabajados: ${x.dias}\n• Horas: ${String(x.hs).replace('.',',')}\n• Te corresponde: ${fmt(x.corr)}\n• Ya cobraste: ${fmt(x.cob)}\n`+(x.ad?`• Adelantos: ${fmt(x.ad)}\n`:'')+`Falta cobrar: ${fmt(x.falta)}\nDrugstore`}
 $('em-prev').onclick=()=>{emMes=addMes(emMes,-1);renderSueldos()};$('em-next').onclick=()=>{emMes=addMes(emMes,1);renderSueldos()};
 function eJornada(){const man=$('e-man').checked;$('e-sue').disabled=!man;$('e-pre').disabled=!man;if(!man){const x=empSueldo({tipo:$('e-tipo').value,jornada:$('e-jor').value});$('e-sue').value=fmtIn(Math.round(x.s));$('e-pre').value=fmtIn(Math.round(x.p))}}
-function fillHorSel(sel){$('e-hor').innerHTML='<option value="">Automático (por nombre)</option>'+horPers().filter(p=>p.activo!==false).map(p=>`<option value="${esc(p.nombre)}"${p.nombre===sel?' selected':''}>${esc(niceH(p.nombre))}</option>`).join('')}
+function fillHorSel(sel){$('e-hor').innerHTML='<option value="">Automático (por nombre)</option>'+horNombres().sort().map(n=>`<option value="${esc(n)}"${n===sel?' selected':''}>${esc(niceH(n))}</option>`).join('')}
 function eLimpiar(){eEdit=null;$('e-man').checked=false;fillHorSel('');['e-nom','e-ape','e-ing','e-tel','e-baja','e-nota'].forEach(i=>$(i).value='');$('e-bl-i').value='1';$('e-tipo').value='Fijo';$('e-loc').value='';$('e-jor').value='7';eJornada();
   $('e-form-t').textContent='Agregar empleado';$('e-guardar').textContent='Agregar empleado';$('e-cancelar').hidden=true}
 function editEmp(id){const e=DB.empleados[id];if(!e)return;eEdit=id;$('e-nom').value=e.nombre;$('e-ape').value=e.apellido;$('e-ing').value=e.ingreso||'';$('e-tel').value=e.tel||'';
