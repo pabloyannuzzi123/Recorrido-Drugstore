@@ -556,28 +556,31 @@ tr.sub td{color:var(--muted);font-size:13px}
       <span class="row"><button class="iconbtn" id="yo-prev" aria-label="Mes anterior">‹</button><b id="yo-mes" style="text-transform:none;letter-spacing:0;color:var(--ink)"></b><button class="iconbtn" id="yo-next" aria-label="Mes siguiente">›</button><button class="btn sm" id="yo-salir">Cerrar mi caja</button></span>
     </h2>
     <div class="summary">
-      <div class="cell hero"><span class="k">Saldo de mi caja</span><span class="v" id="yo-saldo"></span><span class="s" id="yo-saldo-s"></span></div>
+      <div class="cell hero"><span class="k">Pesos en mi caja</span><span class="v" id="yo-saldo"></span><span class="s" id="yo-saldo-s"></span></div>
+      <div class="cell"><span class="k">Dólares</span><span class="v" id="yo-usd"></span><span class="s" id="yo-usd-s"></span></div>
       <div class="cell"><span class="k">Retiré este mes</span><span class="v" id="yo-ret"></span><span class="s" id="yo-ret-s"></span></div>
-      <div class="cell"><span class="k">Gasté este mes</span><span class="v" id="yo-gas"></span><span class="s" id="yo-gas-s"></span></div>
     </div>
     <p class="note">Esto no lo ve nadie más. A la oficina solo le baja el saldo del cajón del que retirás, sin detalle, para que el arqueo siempre les dé bien. Tus retiros y gastos no cuentan en el "Resultado del mes" de los kioscos.</p>
   </section>
   <section class="box">
     <h2>Cargar</h2>
     <div class="grid4">
-      <label>Qué es<select class="f" id="yo-tipo"><option value="retiro">Retiro de un cajón o caja</option><option value="gasto">Gasto mío</option><option value="aporte">Pongo plata en la oficina</option><option value="ingreso">Otro ingreso a mi caja</option></select></label>
+      <label>Qué es<select class="f" id="yo-tipo"><option value="retiro">Retiro de un cajón o caja</option><option value="gasto">Gasto mío</option><option value="aporte">Pongo plata en la oficina</option><option value="ingreso">Otro ingreso a mi caja</option><option value="compra">Compré dólares</option><option value="venta">Vendí dólares</option></select></label>
       <label>Fecha<input type="date" class="f" id="yo-fecha"></label>
-      <label>Monto<input class="f money" id="yo-monto" inputmode="decimal" placeholder="0"></label>
+      <label class="yo-mon">Moneda<select class="f" id="yo-moneda"><option value="ARS">Pesos</option><option value="USD">Dólares</option></select></label>
+      <label><span id="yo-monto-l">Monto</span><input class="f money" id="yo-monto" inputmode="decimal" placeholder="0"></label>
+      <label class="yo-fx">Cotización (pesos por dólar)<input class="f money" id="yo-cot" inputmode="decimal" placeholder="0"></label>
       <label class="yo-caja">De / a qué caja<select class="f" id="yo-caja"></select></label>
       <label class="yo-cat">Categoría<select class="f" id="yo-cat"><option>Personal</option><option>Casa</option><option>Auto</option><option>Familia</option><option>Impuestos personales</option><option>Inversión</option><option>Departamentos</option><option>Cabañas</option><option>Casa de celulares</option><option>Otro</option></select></label>
       <label class="w2">Detalle<input class="f" id="yo-det" placeholder="Opcional"></label>
     </div>
+    <p class="note" id="yo-fx-t" hidden></p>
     <div class="row"><button class="btn primary" id="yo-ok">Guardar</button><span class="note" id="yo-msg"></span></div>
   </section>
   <section class="box">
     <h2>Movimientos del mes</h2>
     <div class="scroll"><table>
-      <thead><tr><th>Fecha</th><th>Concepto</th><th class="num">Entra</th><th class="num">Sale</th><th class="num">Saldo</th><th></th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Concepto</th><th class="num">Pesos</th><th class="num">Saldo $</th><th class="num">US$</th><th class="num">Saldo US$</th><th></th></tr></thead>
       <tbody id="yo-movs"></tbody>
     </table></div>
   </section>
@@ -591,7 +594,7 @@ tr.sub td{color:var(--muted);font-size:13px}
   </section>
   <section class="box">
     <h2>Saldo inicial de mi caja</h2>
-    <div class="row"><input type="date" class="f" id="yo-ini-f" style="max-width:170px" aria-label="Desde"><input class="f money" id="yo-ini-m" inputmode="decimal" placeholder="0" style="max-width:170px" aria-label="Saldo inicial"><button class="btn sm" id="yo-ini-ok">Guardar saldo inicial</button><span class="note" id="yo-ini-msg"></span></div>
+    <div class="row"><input type="date" class="f" id="yo-ini-f" style="max-width:170px" aria-label="Desde"><input class="f money" id="yo-ini-m" inputmode="decimal" placeholder="0" style="max-width:170px" aria-label="Saldo inicial"><input class="f money" id="yo-ini-u" inputmode="decimal" placeholder="US$ 0" style="max-width:150px" aria-label="Saldo inicial en dólares"><button class="btn sm" id="yo-ini-ok">Guardar saldo inicial</button><span class="note" id="yo-ini-msg"></span></div>
   </section>
 </main>
 
@@ -1240,39 +1243,52 @@ function renderProvHoy(){const f=state.fecha,wd=toDate(f).getUTCDay();const L=pr
 
 /* ================= MI CAJA (dueño) ================= */
 let yoMes=hoyISO().slice(0,7);
-const YO_T={retiro:'Retiro',gasto:'Gasto',aporte:'Puse en la oficina',ingreso:'Otro ingreso'};
+const YO_T={retiro:'Retiro',gasto:'Gasto',aporte:'Puse en la oficina',ingreso:'Otro ingreso',compra:'Compré dólares',venta:'Vendí dólares'};
+const fUsd=n=>(n<0?'− ':'')+'US$ '+Math.abs(Math.round((n||0)*100)/100).toLocaleString('es-AR',{maximumFractionDigits:2});
 async function cargarMiCaja(){if(!DUENO||!online)return;
   try{const j=await apiGet({accion:'miCaja',dueno:DUENO});DB.mios={};(j.movs||[]).forEach(x=>DB.mios[x.id]=x);$('tab-yo').hidden=false;$('dn-msg').textContent='Mi caja abierta. Está en la pestaña 🔒 Mi caja.';refreshAll()}
   catch(e){$('dn-msg').textContent='No se pudo abrir: revisá la clave del dueño.'}}
-const yoSigno=m=>m.tipo==='retiro'||m.tipo==='ingreso'?m.monto:-m.monto;
+function yoSigno(m){if(m.moneda==='USD')return 0;if(m.tipo==='compra')return -m.monto;if(m.tipo==='venta')return m.monto;return m.tipo==='retiro'||m.tipo==='ingreso'?m.monto:-m.monto}
+function yoUsd(m){if(m.tipo==='compra')return m.usd||0;if(m.tipo==='venta')return -(m.usd||0);if(m.moneda==='USD')return m.tipo==='ingreso'?m.usd:-m.usd;return 0}
 function renderMiCaja(){const M=Object.values(DB.mios).filter(m=>m.tipo!=='config'),cfg=DB.mios.config||{},m=yoMes;
-  $('yo-mes').textContent=mesT(m);$('yo-ini-f').value=cfg.fecha||'';$('yo-ini-m').value=fmtIn(cfg.saldo);
+  $('yo-mes').textContent=mesT(m);$('yo-ini-f').value=cfg.fecha||'';$('yo-ini-m').value=fmtIn(cfg.saldo);$('yo-ini-u').value=fmtIn(cfg.usd);
   const ini=cfg.fecha||'2000-01-01',L=M.filter(x=>x.fecha>=ini).sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.creado||'').localeCompare(b.creado||''));
-  const saldo=(cfg.saldo||0)+L.reduce((t,x)=>t+yoSigno(x),0);
+  const saldo=(cfg.saldo||0)+L.reduce((t,x)=>t+yoSigno(x),0),usd=(cfg.usd||0)+L.reduce((t,x)=>t+yoUsd(x),0);
+  const ultFx=L.filter(x=>x.cot).slice(-1)[0];$('yo-usd').textContent=fUsd(usd);$('yo-usd').classList.toggle('neg',usd<0);
+  $('yo-usd-s').textContent=ultFx?'≈ '+fmt(usd*ultFx.cot)+' a $'+ultFx.cot.toLocaleString('es-AR')+' ('+fCorta(ultFx.fecha)+')':'cargá una compra para ver el valor en pesos';
   $('yo-saldo').textContent=fmt(saldo);$('yo-saldo').classList.toggle('neg',saldo<0);$('yo-saldo-s').textContent='al día de hoy'+(cfg.fecha?' · desde el '+fCorta(cfg.fecha):'');
   const mes=L.filter(x=>x.fecha.slice(0,7)===m),ret=mes.filter(x=>x.tipo==='retiro'),gas=mes.filter(x=>x.tipo==='gasto');
   $('yo-ret').textContent=fmt(ret.reduce((t,x)=>t+x.monto,0));$('yo-ret-s').textContent=ret.length+(ret.length===1?' retiro':' retiros');
-  $('yo-gas').textContent=fmt(gas.reduce((t,x)=>t+x.monto,0));$('yo-gas-s').textContent=gas.length+(gas.length===1?' gasto':' gastos');
-  let run=(cfg.saldo||0)+L.filter(x=>x.fecha<m+'-01').reduce((t,x)=>t+yoSigno(x),0);
-  const rows=mes.map(x=>{const v=yoSigno(x);run+=v;return `<tr><td>${fCorta(x.fecha)}</td><td><b>${YO_T[x.tipo]}</b>${x.caja?' · '+esc(accN(x.caja)):''}${x.cat?' · '+esc(x.cat):''}${x.detalle?'<div class="note">'+esc(x.detalle)+'</div>':''}</td><td class="num">${v>0?fmt(v):''}</td><td class="num">${v<0?fmt(-v):''}</td><td class="num${run<0?' neg':''}">${fmt(run)}</td><td class="num"><button class="mini" data-ydel="${esc(x.id)}">Borrar</button></td></tr>`});
-  $('yo-movs').innerHTML=rows.length?rows.reverse().join(''):'<tr><td colspan="6" class="empty">No hay movimientos este mes.</td></tr>';
+  const gP=gas.filter(x=>x.moneda!=='USD').reduce((t,x)=>t+x.monto,0),gU=gas.filter(x=>x.moneda==='USD').reduce((t,x)=>t+x.usd,0);
+  $('yo-ret-s').textContent=ret.length+(ret.length===1?' retiro':' retiros')+' · gasté '+fmt(gP)+(gU?' y '+fUsd(gU):'');
+  const antes=L.filter(x=>x.fecha<m+'-01');let run=(cfg.saldo||0)+antes.reduce((t,x)=>t+yoSigno(x),0),runU=(cfg.usd||0)+antes.reduce((t,x)=>t+yoUsd(x),0);
+  const rows=mes.map(x=>{const v=yoSigno(x),u=yoUsd(x);run+=v;runU+=u;return `<tr><td>${fCorta(x.fecha)}</td><td><b>${YO_T[x.tipo]}</b>${x.caja?' · '+esc(accN(x.caja)):''}${x.cat?' · '+esc(x.cat):''}${x.cot?' · a $'+x.cot.toLocaleString('es-AR'):''}${x.detalle?'<div class="note">'+esc(x.detalle)+'</div>':''}</td>
+    <td class="num${v<0?' neg':''}">${v?fmt(v):''}</td><td class="num${run<0?' neg':''}">${fmt(run)}</td><td class="num${u<0?' neg':''}">${u?fUsd(u):''}</td><td class="num${runU<0?' neg':''}">${fUsd(runU)}</td><td class="num"><button class="mini" data-ydel="${esc(x.id)}">Borrar</button></td></tr>`});
+  $('yo-movs').innerHTML=rows.length?rows.reverse().join(''):'<tr><td colspan="7" class="empty">No hay movimientos este mes.</td></tr>';
   const pl={};ret.forEach(x=>{pl[x.caja]=(pl[x.caja]||0)+x.monto});
   $('yo-loc').innerHTML=Object.keys(pl).length?Object.entries(pl).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(accN(k))}</td><td class="num">${fmt(v)}</td></tr>`).join(''):'<tr><td class="empty">Sin retiros este mes.</td></tr>';
-  const pc={};gas.forEach(x=>{pc[x.cat]=(pc[x.cat]||0)+x.monto});
-  $('yo-cats').innerHTML=Object.keys(pc).length?Object.entries(pc).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num">${fmt(v)}</td></tr>`).join(''):'<tr><td class="empty">Sin gastos este mes.</td></tr>';
+  const pc={},pu={};gas.forEach(x=>{if(x.moneda==='USD')pu[x.cat]=(pu[x.cat]||0)+x.usd;else pc[x.cat]=(pc[x.cat]||0)+x.monto});
+  const cats=[...new Set([...Object.keys(pc),...Object.keys(pu)])].sort((a,b)=>(pc[b]||0)-(pc[a]||0));
+  $('yo-cats').innerHTML=cats.length?cats.map(k=>`<tr><td>${esc(k)}</td><td class="num">${pc[k]?fmt(pc[k]):''}</td><td class="num">${pu[k]?fUsd(pu[k]):''}</td></tr>`).join(''):'<tr><td class="empty">Sin gastos este mes.</td></tr>';
   $('yo-movs').querySelectorAll('[data-ydel]').forEach(b=>b.onclick=async()=>{if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='¿Borrar? Tocá de nuevo';return}
     try{await del('duenomovs',b.dataset.ydel);delete DB.mios[b.dataset.ydel];await refrescarAjustes();renderMiCaja()}catch(e){}})}
 async function refrescarAjustes(){try{const j=await apiGet({accion:'todo'});DB.ajustes=j.ajustes||[]}catch(e){}}
-function yoVis(){const t=$('yo-tipo').value;document.querySelectorAll('.yo-caja').forEach(e=>e.hidden=!(t==='retiro'||t==='aporte'));document.querySelectorAll('.yo-cat').forEach(e=>e.hidden=t!=='gasto')}
-$('yo-tipo').onchange=yoVis;$('yo-monto').addEventListener('blur',e=>{e.target.value=fmtIn(parse(e.target.value))});
+function yoVis(){const t=$('yo-tipo').value,fx=t==='compra'||t==='venta';document.querySelectorAll('.yo-caja').forEach(e=>e.hidden=!(t==='retiro'||t==='aporte'));document.querySelectorAll('.yo-cat').forEach(e=>e.hidden=t!=='gasto');
+  document.querySelectorAll('.yo-mon').forEach(e=>e.hidden=!(t==='gasto'||t==='ingreso'));document.querySelectorAll('.yo-fx').forEach(e=>e.hidden=!fx);
+  if(!(t==='gasto'||t==='ingreso'))$('yo-moneda').value='ARS';$('yo-monto-l').textContent=fx||$('yo-moneda').value==='USD'?'Dólares (US$)':'Monto en pesos';yoFx()}
+function yoFx(){const t=$('yo-tipo').value,u=parse($('yo-monto').value),c=parse($('yo-cot').value),el=$('yo-fx-t');
+  if((t==='compra'||t==='venta')&&u&&c){el.hidden=false;el.textContent=(t==='compra'?'Salen ':'Entran ')+fmt(u*c)+' de tus pesos y '+(t==='compra'?'entran ':'salen ')+fUsd(u)+'.'}else el.hidden=true}
+$('yo-tipo').onchange=yoVis;$('yo-moneda').onchange=yoVis;['yo-monto','yo-cot'].forEach(i=>{$(i).addEventListener('input',yoFx);$(i).addEventListener('blur',e=>{e.target.value=fmtIn(parse(e.target.value))})});
 $('yo-ok').onclick=async()=>{const t=$('yo-tipo').value,mo=parse($('yo-monto').value);if(!mo){$('yo-msg').textContent='Poné el monto.';return}
   const x={id:uid('d'),tipo:t,fecha:$('yo-fecha').value||hoyISO(),monto:mo,detalle:$('yo-det').value.trim(),creado:new Date().toISOString()};
   if(t==='retiro'||t==='aporte'){x.caja=$('yo-caja').value;x.cajaN=accN(x.caja)}if(t==='gasto')x.cat=$('yo-cat').value;
+  if(t==='compra'||t==='venta'){const c=parse($('yo-cot').value);if(!c){$('yo-msg').textContent='Poné la cotización.';return}x.usd=mo;x.cot=c;x.monto=Math.round(mo*c)}
+  else if((t==='gasto'||t==='ingreso')&&$('yo-moneda').value==='USD'){x.moneda='USD';x.usd=mo}
   $('yo-ok').disabled=true;$('yo-msg').textContent='Guardando…';
   try{await put('duenomovs',x.id,x);DB.mios[x.id]=x;if(x.caja){DB.ajustes.push({f:x.fecha,a:x.caja,m:t==='retiro'?-mo:mo})}
-    $('yo-monto').value='';$('yo-det').value='';$('yo-msg').textContent='Guardado.';renderMiCaja()}
+    $('yo-monto').value='';$('yo-det').value='';$('yo-msg').textContent='Guardado.';yoFx();renderMiCaja()}
   catch(e){$('yo-msg').textContent=e.message==='dueno'?'La clave del dueño no es correcta.':'No se pudo guardar. Probá de nuevo.'}$('yo-ok').disabled=false};
-$('yo-ini-ok').onclick=async()=>{const c={id:'config',tipo:'config',fecha:$('yo-ini-f').value||hoyISO(),saldo:parse($('yo-ini-m').value)};
+$('yo-ini-ok').onclick=async()=>{const c={id:'config',tipo:'config',fecha:$('yo-ini-f').value||hoyISO(),saldo:parse($('yo-ini-m').value),usd:parse($('yo-ini-u').value)};
   try{await put('duenomovs','config',c);DB.mios.config=c;$('yo-ini-msg').textContent='Guardado.';renderMiCaja()}catch(e){$('yo-ini-msg').textContent='No se pudo guardar.'}};
 $('yo-prev').onclick=()=>{yoMes=addMes(yoMes,-1);renderMiCaja()};$('yo-next').onclick=()=>{yoMes=addMes(yoMes,1);renderMiCaja()};
 $('yo-salir').onclick=()=>{DUENO='';DB.mios={};ls.del('caja_dueno');$('tab-yo').hidden=true;$('dn-msg').textContent='';show('dia')};
