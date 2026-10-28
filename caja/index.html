@@ -178,6 +178,7 @@ tr.sub td{color:var(--muted);font-size:13px}
       <button class="tab" data-v="che" role="tab" aria-selected="false">Cheques</button>
       <button class="tab" data-v="emp" role="tab" aria-selected="false">Empleados</button>
       <button class="tab" data-v="mes" role="tab" aria-selected="false">Resultado del mes</button>
+      <button class="tab" data-v="yo" role="tab" aria-selected="false" id="tab-yo" hidden>🔒 Mi caja</button>
     </div>
     <div class="datebar" id="bar-dia">
       <button class="iconbtn" id="prev" aria-label="Día anterior">‹</button>
@@ -297,7 +298,7 @@ tr.sub td{color:var(--muted);font-size:13px}
   <section class="box" id="k-det-box" hidden>
     <h2><span id="k-det-t"></span> <small id="k-det-s"></small></h2>
     <div class="scroll"><table>
-      <thead><tr><th>Fecha</th><th>Concepto</th><th class="num">Entra</th><th class="num">Sale</th><th class="num">Saldo</th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Concepto</th><th class="num">Entra</th><th class="num">Sale</th><th class="num" id="k-det-sh">Saldo</th></tr></thead>
       <tbody id="k-det"></tbody>
     </table></div>
   </section>
@@ -321,6 +322,13 @@ tr.sub td{color:var(--muted);font-size:13px}
     <span class="note" id="s8-msg"></span>
     <h3>Este equipo</h3>
     <p class="note" id="quien-t"></p>
+    <h3>Acceso del dueño</h3>
+    <div class="row" id="dn-login">
+      <input class="f" type="password" id="dn-clave" placeholder="Clave del dueño" style="max-width:200px" aria-label="Clave del dueño">
+      <label class="note" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="dn-rec"> Recordar en este equipo</label>
+      <button class="btn sm" id="dn-ok">Abrir mi caja</button><span class="note" id="dn-msg"></span>
+    </div>
+    <p class="note">Solo con la clave del dueño. Activá "recordar" únicamente en tu celular o tu computadora, nunca en la PC de la oficina.</p>
     <button class="linkbtn" id="desconectar">Cambiar la conexión, la clave o el nombre en este equipo</button>
   </section>
 </main>
@@ -541,6 +549,52 @@ tr.sub td{color:var(--muted);font-size:13px}
   </section>
 </main>
 
+<!-- ============ MI CAJA (dueño) ============ -->
+<main id="view-yo" hidden>
+  <section class="box">
+    <h2>Mi caja
+      <span class="row"><button class="iconbtn" id="yo-prev" aria-label="Mes anterior">‹</button><b id="yo-mes" style="text-transform:none;letter-spacing:0;color:var(--ink)"></b><button class="iconbtn" id="yo-next" aria-label="Mes siguiente">›</button><button class="btn sm" id="yo-salir">Cerrar mi caja</button></span>
+    </h2>
+    <div class="summary">
+      <div class="cell hero"><span class="k">Saldo de mi caja</span><span class="v" id="yo-saldo"></span><span class="s" id="yo-saldo-s"></span></div>
+      <div class="cell"><span class="k">Retiré este mes</span><span class="v" id="yo-ret"></span><span class="s" id="yo-ret-s"></span></div>
+      <div class="cell"><span class="k">Gasté este mes</span><span class="v" id="yo-gas"></span><span class="s" id="yo-gas-s"></span></div>
+    </div>
+    <p class="note">Esto no lo ve nadie más. A la oficina solo le baja el saldo del cajón del que retirás, sin detalle, para que el arqueo siempre les dé bien. Tus retiros y gastos no cuentan en el "Resultado del mes" de los kioscos.</p>
+  </section>
+  <section class="box">
+    <h2>Cargar</h2>
+    <div class="grid4">
+      <label>Qué es<select class="f" id="yo-tipo"><option value="retiro">Retiro de un cajón o caja</option><option value="gasto">Gasto mío</option><option value="aporte">Pongo plata en la oficina</option><option value="ingreso">Otro ingreso a mi caja</option></select></label>
+      <label>Fecha<input type="date" class="f" id="yo-fecha"></label>
+      <label>Monto<input class="f money" id="yo-monto" inputmode="decimal" placeholder="0"></label>
+      <label class="yo-caja">De / a qué caja<select class="f" id="yo-caja"></select></label>
+      <label class="yo-cat">Categoría<select class="f" id="yo-cat"><option>Personal</option><option>Casa</option><option>Auto</option><option>Familia</option><option>Impuestos personales</option><option>Inversión</option><option>Departamentos</option><option>Cabañas</option><option>Casa de celulares</option><option>Otro</option></select></label>
+      <label class="w2">Detalle<input class="f" id="yo-det" placeholder="Opcional"></label>
+    </div>
+    <div class="row"><button class="btn primary" id="yo-ok">Guardar</button><span class="note" id="yo-msg"></span></div>
+  </section>
+  <section class="box">
+    <h2>Movimientos del mes</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Fecha</th><th>Concepto</th><th class="num">Entra</th><th class="num">Sale</th><th class="num">Saldo</th><th></th></tr></thead>
+      <tbody id="yo-movs"></tbody>
+    </table></div>
+  </section>
+  <section class="box">
+    <h2>Retirado por local en el mes</h2>
+    <div class="scroll"><table><tbody id="yo-loc"></tbody></table></div>
+  </section>
+  <section class="box">
+    <h2>Mis gastos por categoría</h2>
+    <div class="scroll"><table><tbody id="yo-cats"></tbody></table></div>
+  </section>
+  <section class="box">
+    <h2>Saldo inicial de mi caja</h2>
+    <div class="row"><input type="date" class="f" id="yo-ini-f" style="max-width:170px" aria-label="Desde"><input class="f money" id="yo-ini-m" inputmode="decimal" placeholder="0" style="max-width:170px" aria-label="Saldo inicial"><button class="btn sm" id="yo-ini-ok">Guardar saldo inicial</button><span class="note" id="yo-ini-msg"></span></div>
+  </section>
+</main>
+
 <!-- ============ MES ============ -->
 <main id="view-mes" hidden>
   <section class="box">
@@ -627,7 +681,7 @@ async function put(col,id,doc){await apiPost({accion:'put',col,id,doc})}
 async function del(col,id){await apiPost({accion:'del',col,id})}
 
 /* ---------- datos ---------- */
-const DB={dias:{},fijos:{},pagosfijos:{},cheques:{},empleados:{},proveedores:{},provmovs:{},adelantos:{},horarios:{},horcfg:null,config:{id:'general'}};
+const DB={dias:{},fijos:{},pagosfijos:{},cheques:{},empleados:{},proveedores:{},provmovs:{},adelantos:{},horarios:{},horcfg:null,ajustes:[],mios:{},config:{id:'general'}};
 /* ---- vínculo con la app de horarios ---- */
 function hTurno(lid,t,f){const g=LOCALES.find(l=>l.id===lid).g,wd=toDate(f).getUTCDay();if(g==='24'||(wd>=4&&wd<=6))return 8;if(t!=='n')return 7;return g==='02'?6.5:4}
 const lunesH=f=>{const w=(toDate(f).getUTCDay()+6)%7;return addDays(f,-w)};
@@ -713,6 +767,7 @@ function ledger(){
   Object.values(DB.cheques).forEach(c=>{if(c.cobrado){const f=c.cobradoEl||c.cobro;if(f>=ini)E.push({f,a:'banco',m:-c.monto,t:'Cheque N° '+(c.numero||'—')+' · '+(c.benef||''),o:5})}});
   Object.values(DB.provmovs).forEach(m=>{if(m.tipo==='pago'&&m.medio!=='Cheque'&&m.fecha>=ini)E.push({f:m.fecha,a:m.origen||'general',m:-m.monto,t:'Pago a '+provName(m.prov)+(m.detalle?' · '+m.detalle:''),o:4})});
   Object.values(DB.adelantos).forEach(x=>{if(x.fecha>=ini)E.push({f:x.fecha,a:x.origen||'general',m:-x.monto,t:'Adelanto '+empN(x.emp),o:4})});
+  (DB.ajustes||[]).forEach(x=>{if(x.f>=ini&&x.m)E.push({f:x.f,a:x.a,m:x.m,t:'Movimiento de la caja del dueño',o:7})});
   E.sort((x,y)=>x.f<y.f?-1:x.f>y.f?1:x.o-y.o);return E}
 function saldos(hasta){const s={};ACC.forEach(a=>s[a.id]=0);ledger().forEach(e=>{if(e.f<=hasta)s[e.a]=(s[e.a]||0)+e.m});return s}
 
@@ -787,7 +842,8 @@ function diaMovAcc(f,r){const a={...r.acc};const m=f.slice(0,7);
   Object.values(DB.fijos).forEach(x=>{const e=fijoEstado(x,m);if(e&&(e.est==='pagado'||e.est==='debitado')&&e.fechaPago===f)a[e.origen||'banco']=(a[e.origen||'banco']||0)-e.monto});
   Object.values(DB.cheques).forEach(c=>{if(c.cobrado&&(c.cobradoEl||c.cobro)===f)a.banco=(a.banco||0)-c.monto});
   Object.values(DB.provmovs).forEach(x=>{if(x.tipo==='pago'&&x.medio!=='Cheque'&&x.fecha===f){const o=x.origen||'general';a[o]=(a[o]||0)-x.monto}});
-  Object.values(DB.adelantos).forEach(x=>{if(x.fecha===f){const o=x.origen||'general';a[o]=(a[o]||0)-x.monto}});return a}
+  Object.values(DB.adelantos).forEach(x=>{if(x.fecha===f){const o=x.origen||'general';a[o]=(a[o]||0)-x.monto}});
+  if(DUENO)(DB.ajustes||[]).forEach(x=>{if(x.f===f)a[x.a]=(a[x.a]||0)+x.m});return a}
 function renderFijosHoy(){
   const f=state.fecha,m=f.slice(0,7),items=[];
   Object.values(DB.fijos).forEach(x=>{const e=fijoEstado(x,m);if(!e)return;
@@ -830,7 +886,7 @@ function lockState(){const L=online&&isLocked(state.fecha);$('dia-fs').disabled=
   if(L){const d=DB.dias[state.fecha];$('lock-t').textContent='Día cerrado'+(d.cargo?' (lo cargó '+d.cargo+')':'')+'. Para modificarlo hace falta la clave del dueño.'}
   if(DUENO&&DB.dias[state.fecha]&&state.fecha<hoyISO()){$('daystate').textContent='Desbloqueado';$('daystate').className='pill info'}}
 $('lock-ok').onclick=async()=>{const c=$('lock-clave').value.trim();if(!c)return;$('lock-msg').textContent='Verificando…';
-  try{await apiGet({accion:'dueno',dueno:c});DUENO=c;$('lock-clave').value='';$('lock-msg').textContent='';lockState()}
+  try{await apiGet({accion:'dueno',dueno:c});DUENO=c;$('lock-clave').value='';$('lock-msg').textContent='';lockState();cargarMiCaja()}
   catch(e){$('lock-msg').textContent='Clave incorrecta.'}};
 $('lock-clave').addEventListener('keydown',e=>{if(e.key==='Enter')$('lock-ok').click()});
 $('add-pago').onclick=()=>{state.movs.push({id:uid('m'),clase:'pago',origen:'general',destino:'',cat:'Proveedor',local:'',detalle:'',monto:0});buildMovs();markDirty();const d=$('movs').querySelectorAll('[data-k=detalle]');d[d.length-1]?.focus()};
@@ -913,13 +969,15 @@ function renderCajas(){
   $('k-ef').textContent=fmt(sum('loc:')+sum('bol:')+s.general);$('k-ban').textContent=fmt(s.banco);$('k-bol').textContent=fmt(sum('bol:'));
   const pendChe=Object.values(DB.cheques).filter(c=>!c.cobrado).reduce((t,c)=>t+c.monto,0);
   $('k-ban-s').textContent=pendChe?'cheques pendientes '+fmt(pendChe):'virtual, débitos y transferencias';
-  const card=a=>{const d=(s[a.id]||0)-(ay[a.id]||0);return `<button class="caja" data-acc="${a.id}" aria-pressed="${kSel===a.id}"><span class="k">${esc(a.n)}</span><span class="v${s[a.id]<0?' neg':''}">${fmt(s[a.id])}</span><span class="d ${d<0?'neg':''}" style="color:var(--muted)">${d?'hoy '+(d>0?'+ ':'')+fmt(d):'sin movimiento hoy'}</span></button>`};
+  const ajHoy=id=>DUENO?0:(DB.ajustes||[]).filter(x=>x.f===hoy&&x.a===id).reduce((t,x)=>t+x.m,0);
+  const card=a=>{const d=(s[a.id]||0)-(ay[a.id]||0)-ajHoy(a.id);return `<button class="caja" data-acc="${a.id}" aria-pressed="${kSel===a.id}"><span class="k">${esc(a.n)}</span><span class="v${s[a.id]<0?' neg':''}">${fmt(s[a.id])}</span><span class="d ${d<0?'neg':''}" style="color:var(--muted)">${d?'hoy '+(d>0?'+ ':'')+fmt(d):'sin movimiento hoy'}</span></button>`};
   $('k-cajas').innerHTML=['Oficina','Cajones','Bolsines'].map(g=>`<p class="grupo-t">${g}</p><div class="cajas">${ACC.filter(a=>a.g===g).map(card).join('')}</div>`).join('');
   $('k-cajas').querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>{kSel=kSel===b.dataset.acc?null:b.dataset.acc;renderCajas()});
   $('k-det-box').hidden=!kSel;
-  if(kSel){let run=0;const rows=ledger().filter(e=>e.a===kSel).map(e=>{run+=e.m;return{...e,run}});
+  $('k-det-sh').hidden=!DUENO;
+  if(kSel){let run=0;const rows=ledger().filter(e=>e.a===kSel).map(e=>{run+=e.m;return{...e,run}}).filter(e=>DUENO||e.o!==7);
     $('k-det-t').textContent=accN(kSel);$('k-det-s').textContent=rows.length+' movimientos · últimos 40';
-    $('k-det').innerHTML=rows.slice(-40).reverse().map(e=>`<tr><td>${fCorta(e.f)}</td><td>${esc(e.t)}</td><td class="num">${e.m>0?fmt(e.m):''}</td><td class="num">${e.m<0?fmt(-e.m):''}</td><td class="num${e.run<0?' neg':''}">${fmt(e.run)}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">Sin movimientos todavía.</td></tr>';
+    $('k-det').innerHTML=rows.slice(-40).reverse().map(e=>`<tr><td>${fCorta(e.f)}</td><td>${esc(e.t)}</td><td class="num">${e.m>0?fmt(e.m):''}</td><td class="num">${e.m<0?fmt(-e.m):''}</td>${DUENO?`<td class="num${e.run<0?' neg':''}">${fmt(e.run)}</td>`:''}</tr>`).join('')||'<tr><td colspan="5" class="empty">Sin movimientos todavía.</td></tr>';
     $('k-det-box').scrollIntoView({behavior:'smooth',block:'nearest'})}
   renderS8();
   // saldos iniciales
@@ -1180,6 +1238,50 @@ function renderProvHoy(){const f=state.fecha,wd=toDate(f).getUTCDay();const L=pr
     :'<p class="empty">Hoy no cobra ningún proveedor del cronograma.</p>');
   $('prov-hoy').querySelectorAll('[data-gop]').forEach(b=>b.onclick=()=>{pSel=b.dataset.gop;show('prov');$('p-det').scrollIntoView({block:'start'})})}
 
+/* ================= MI CAJA (dueño) ================= */
+let yoMes=hoyISO().slice(0,7);
+const YO_T={retiro:'Retiro',gasto:'Gasto',aporte:'Puse en la oficina',ingreso:'Otro ingreso'};
+async function cargarMiCaja(){if(!DUENO||!online)return;
+  try{const j=await apiGet({accion:'miCaja',dueno:DUENO});DB.mios={};(j.movs||[]).forEach(x=>DB.mios[x.id]=x);$('tab-yo').hidden=false;$('dn-msg').textContent='Mi caja abierta. Está en la pestaña 🔒 Mi caja.';refreshAll()}
+  catch(e){$('dn-msg').textContent='No se pudo abrir: revisá la clave del dueño.'}}
+const yoSigno=m=>m.tipo==='retiro'||m.tipo==='ingreso'?m.monto:-m.monto;
+function renderMiCaja(){const M=Object.values(DB.mios).filter(m=>m.tipo!=='config'),cfg=DB.mios.config||{},m=yoMes;
+  $('yo-mes').textContent=mesT(m);$('yo-ini-f').value=cfg.fecha||'';$('yo-ini-m').value=fmtIn(cfg.saldo);
+  const ini=cfg.fecha||'2000-01-01',L=M.filter(x=>x.fecha>=ini).sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.creado||'').localeCompare(b.creado||''));
+  const saldo=(cfg.saldo||0)+L.reduce((t,x)=>t+yoSigno(x),0);
+  $('yo-saldo').textContent=fmt(saldo);$('yo-saldo').classList.toggle('neg',saldo<0);$('yo-saldo-s').textContent='al día de hoy'+(cfg.fecha?' · desde el '+fCorta(cfg.fecha):'');
+  const mes=L.filter(x=>x.fecha.slice(0,7)===m),ret=mes.filter(x=>x.tipo==='retiro'),gas=mes.filter(x=>x.tipo==='gasto');
+  $('yo-ret').textContent=fmt(ret.reduce((t,x)=>t+x.monto,0));$('yo-ret-s').textContent=ret.length+(ret.length===1?' retiro':' retiros');
+  $('yo-gas').textContent=fmt(gas.reduce((t,x)=>t+x.monto,0));$('yo-gas-s').textContent=gas.length+(gas.length===1?' gasto':' gastos');
+  let run=(cfg.saldo||0)+L.filter(x=>x.fecha<m+'-01').reduce((t,x)=>t+yoSigno(x),0);
+  const rows=mes.map(x=>{const v=yoSigno(x);run+=v;return `<tr><td>${fCorta(x.fecha)}</td><td><b>${YO_T[x.tipo]}</b>${x.caja?' · '+esc(accN(x.caja)):''}${x.cat?' · '+esc(x.cat):''}${x.detalle?'<div class="note">'+esc(x.detalle)+'</div>':''}</td><td class="num">${v>0?fmt(v):''}</td><td class="num">${v<0?fmt(-v):''}</td><td class="num${run<0?' neg':''}">${fmt(run)}</td><td class="num"><button class="mini" data-ydel="${esc(x.id)}">Borrar</button></td></tr>`});
+  $('yo-movs').innerHTML=rows.length?rows.reverse().join(''):'<tr><td colspan="6" class="empty">No hay movimientos este mes.</td></tr>';
+  const pl={};ret.forEach(x=>{pl[x.caja]=(pl[x.caja]||0)+x.monto});
+  $('yo-loc').innerHTML=Object.keys(pl).length?Object.entries(pl).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(accN(k))}</td><td class="num">${fmt(v)}</td></tr>`).join(''):'<tr><td class="empty">Sin retiros este mes.</td></tr>';
+  const pc={};gas.forEach(x=>{pc[x.cat]=(pc[x.cat]||0)+x.monto});
+  $('yo-cats').innerHTML=Object.keys(pc).length?Object.entries(pc).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num">${fmt(v)}</td></tr>`).join(''):'<tr><td class="empty">Sin gastos este mes.</td></tr>';
+  $('yo-movs').querySelectorAll('[data-ydel]').forEach(b=>b.onclick=async()=>{if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='¿Borrar? Tocá de nuevo';return}
+    try{await del('duenomovs',b.dataset.ydel);delete DB.mios[b.dataset.ydel];await refrescarAjustes();renderMiCaja()}catch(e){}})}
+async function refrescarAjustes(){try{const j=await apiGet({accion:'todo'});DB.ajustes=j.ajustes||[]}catch(e){}}
+function yoVis(){const t=$('yo-tipo').value;document.querySelectorAll('.yo-caja').forEach(e=>e.hidden=!(t==='retiro'||t==='aporte'));document.querySelectorAll('.yo-cat').forEach(e=>e.hidden=t!=='gasto')}
+$('yo-tipo').onchange=yoVis;$('yo-monto').addEventListener('blur',e=>{e.target.value=fmtIn(parse(e.target.value))});
+$('yo-ok').onclick=async()=>{const t=$('yo-tipo').value,mo=parse($('yo-monto').value);if(!mo){$('yo-msg').textContent='Poné el monto.';return}
+  const x={id:uid('d'),tipo:t,fecha:$('yo-fecha').value||hoyISO(),monto:mo,detalle:$('yo-det').value.trim(),creado:new Date().toISOString()};
+  if(t==='retiro'||t==='aporte'){x.caja=$('yo-caja').value;x.cajaN=accN(x.caja)}if(t==='gasto')x.cat=$('yo-cat').value;
+  $('yo-ok').disabled=true;$('yo-msg').textContent='Guardando…';
+  try{await put('duenomovs',x.id,x);DB.mios[x.id]=x;if(x.caja){DB.ajustes.push({f:x.fecha,a:x.caja,m:t==='retiro'?-mo:mo})}
+    $('yo-monto').value='';$('yo-det').value='';$('yo-msg').textContent='Guardado.';renderMiCaja()}
+  catch(e){$('yo-msg').textContent=e.message==='dueno'?'La clave del dueño no es correcta.':'No se pudo guardar. Probá de nuevo.'}$('yo-ok').disabled=false};
+$('yo-ini-ok').onclick=async()=>{const c={id:'config',tipo:'config',fecha:$('yo-ini-f').value||hoyISO(),saldo:parse($('yo-ini-m').value)};
+  try{await put('duenomovs','config',c);DB.mios.config=c;$('yo-ini-msg').textContent='Guardado.';renderMiCaja()}catch(e){$('yo-ini-msg').textContent='No se pudo guardar.'}};
+$('yo-prev').onclick=()=>{yoMes=addMes(yoMes,-1);renderMiCaja()};$('yo-next').onclick=()=>{yoMes=addMes(yoMes,1);renderMiCaja()};
+$('yo-salir').onclick=()=>{DUENO='';DB.mios={};ls.del('caja_dueno');$('tab-yo').hidden=true;$('dn-msg').textContent='';show('dia')};
+$('dn-ok').onclick=async()=>{const c=$('dn-clave').value.trim();if(!c)return;$('dn-msg').textContent='Verificando…';
+  try{await apiGet({accion:'dueno',dueno:c});DUENO=c;if($('dn-rec').checked)ls.set('caja_dueno',c);$('dn-clave').value='';await cargarMiCaja();show('yo')}
+  catch(e){$('dn-msg').textContent='Clave del dueño incorrecta.'}};
+$('dn-clave').addEventListener('keydown',e=>{if(e.key==='Enter')$('dn-ok').click()});
+$('yo-caja').innerHTML=ACC_OPTS('general');$('yo-fecha').value=hoyISO();yoVis();
+
 /* ================= RESULTADO DEL MES ================= */
 function renderMes(){
   const m=$('mes').value||hoyISO().slice(0,7);
@@ -1212,11 +1314,11 @@ $('mes').onchange=renderMes;
 
 /* ================= navegación ================= */
 let vista='dia';
-function show(v){vista=v;['dia','cajas','fijos','prov','che','emp','mes'].forEach(k=>$('view-'+k).hidden=k!==v);
+function show(v){if(v==='yo'&&!DUENO)v='cajas';vista=v;['dia','cajas','fijos','prov','che','emp','mes','yo'].forEach(k=>$('view-'+k).hidden=k!==v);
   document.querySelectorAll('#tabs .tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.v===v));
   $('bar-dia').hidden=v!=='dia';$('bar-mes').hidden=v!=='mes';refreshAll()}
 document.querySelectorAll('#tabs .tab').forEach(t=>t.onclick=()=>show(t.dataset.v));
-function refreshAll(){if(vista==='dia'){calc();renderFijosHoy();renderProvHoy();setDayState()}if(vista==='cajas')renderCajas();if(vista==='fijos')renderFijos();if(vista==='che'){renderCheques();avisoCheque()}if(vista==='mes')renderMes();if(vista==='emp')renderEmpleados();if(vista==='prov')renderProveedores()}
+function refreshAll(){if(vista==='dia'){calc();renderFijosHoy();renderProvHoy();setDayState()}if(vista==='cajas')renderCajas();if(vista==='fijos')renderFijos();if(vista==='che'){renderCheques();avisoCheque()}if(vista==='mes')renderMes();if(vista==='emp')renderEmpleados();if(vista==='prov')renderProveedores();if(vista==='yo')renderMiCaja()}
 
 /* ================= inicio ================= */
 function verSetup(on){$('setup').hidden=!on;document.querySelectorAll('main').forEach(m=>m.hidden=true);$('tabs').hidden=on;$('bar-dia').hidden=on;$('bar-mes').hidden=true;if(!on)show(vista)}
@@ -1233,9 +1335,11 @@ async function conectar(){
     DB.proveedores={};(j.proveedores||[]).forEach(x=>DB.proveedores[x.id]=x);
     DB.provmovs={};(j.provmovs||[]).forEach(x=>DB.provmovs[x.id]=x);
     DB.adelantos={};(j.adelantos||[]).forEach(x=>DB.adelantos[x.id]=x);
+    DB.ajustes=j.ajustes||[];
     DB.horarios={};(j.horarios||[]).forEach(x=>DB.horarios[x.id]=x);DB.horcfg=j.horcfg||null;fillHorSel($('e-hor').value);
     LIM=DB.config.limiteCheques||0;$('c-limite').value=fmtIn(LIM);
-    $('status').textContent='Conectado a la planilla de caja';verSetup(false);openDay(state.fecha);return true}
+    $('status').textContent='Conectado a la planilla de caja';verSetup(false);if(!DUENO&&ls.get('caja_dueno')){DUENO=ls.get('caja_dueno');cargarMiCaja()}
+    else if(!DUENO){apiGet({accion:'dueno',dueno:CLAVE}).then(()=>{DUENO=CLAVE;cargarMiCaja();lockState()}).catch(()=>{})}openDay(state.fecha);return true}
   catch(e){online=false;$('status').textContent=e.message==='clave'?'Clave incorrecta':'Sin conexión con la planilla';$('status').className='status bad';return e.message}}
 $('s-ok').onclick=async()=>{API=URL_FIJA||$('s-url').value.trim();CLAVE=$('s-clave').value.trim();QUIEN=$('s-quien').value.trim();
   if(!QUIEN){$('s-msg').textContent='Escribí tu nombre.';return}
