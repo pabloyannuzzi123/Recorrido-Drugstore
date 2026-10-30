@@ -91,7 +91,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
     <label class="l">Gastos pagados con la caja</label>
     <div id="gastos" class="gl"></div>
     <button type="button" class="btn" id="add-g">+ Agregar gasto</button>
-    <p class="hint">Proveedores, limpieza, arreglos… lo que se pagó con plata del local. El efectivo de arriba es lo que quedó <b>después</b> de pagar esto. No anotes el pago a franqueros: eso se calcula solo.</p>
+    <p class="hint">Proveedores, limpieza, arreglos… pagados con la plata que dejaron las encargadas en el local, no con la caja de tu turno. No anotes el pago a franqueros: eso se calcula solo.</p>
     <label class="l" for="nota">Nota (opcional)</label>
     <textarea class="f" id="nota" placeholder="Ej.: faltaron $500, se rompió el posnet"></textarea>
     <button class="btn primary" id="enviar">Enviar a la oficina</button>
@@ -165,7 +165,7 @@ $('enviar').onclick=async()=>{const q=$('quien').value.trim(),ef=parse($('ef').v
   try{const r=await fetch(URL_FIJA,{method:'POST',body:JSON.stringify({accion:'cierreTurno',clave:CLAVE,cierre})});const j=await r.json();
     if(!j.ok)throw new Error(j.error||'error');
     const l=LOCALES.find(x=>x.id===LOCAL);
-    $('res').innerHTML=`<span>Local</span><span>${l.n}</span><span>Turno</span><span>${TN[turno]} ${cierre.fecha.slice(8)}/${cierre.fecha.slice(5,7)}</span><span>Efectivo</span><span>${fmt(ef)}</span><span>Virtual</span><span>${fmt(vi)}</span>${gt?`<span>Gastos (${gastos.length})</span><span>${fmt(gt)}</span>`:''}<span>Vendido en el turno</span><span>${fmt(ef+vi+gt)}</span>`;
+    $('res').innerHTML=`<span>Local</span><span>${l.n}</span><span>Turno</span><span>${TN[turno]} ${cierre.fecha.slice(8)}/${cierre.fecha.slice(5,7)}</span><span>Efectivo</span><span>${fmt(ef)}</span><span>Virtual</span><span>${fmt(vi)}</span>${gt?`<span>Gastos (${gastos.length})</span><span>${fmt(gt)}</span>`:''}<span>Total del turno</span><span>${fmt(ef+vi)}</span>`;
     $('form').hidden=true;$('hecho').hidden=false}
   catch(e){$('msg').className='msg bad';$('msg').textContent=e.message==='clave'?'La clave de este celular ya no sirve: tocá "Cambiar local o clave" abajo.':'No se pudo enviar. Revisá internet y tocá Enviar de nuevo.'}
   $('enviar').disabled=false};
