@@ -127,6 +127,11 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .ledger div:last-child{border-bottom:none}
 .ledger span:last-child{font-family:var(--f-num);white-space:nowrap}
 .setup{max-width:520px;margin:40px auto}
+#rec-body tr.first td{border-top:2px solid var(--line)}
+#rec-body input{min-width:118px}
+#rec-body td.tn{font-size:13px;color:var(--muted);white-space:nowrap}
+.inf{display:block;font-size:11px;text-align:right;font-family:var(--f-num);margin-top:2px}
+.inf.ok{color:var(--accent)}.inf.dif{color:var(--warn);font-weight:600}
 .crono{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
 .cdia{border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .cdia.hoy{border-color:var(--accent);background:var(--accent-soft)}
@@ -216,11 +221,12 @@ tr.sub td{color:var(--muted);font-size:13px}
   </div>
   <fieldset class="fs" id="dia-fs">
   <section class="box">
-    <h2>1 · Recaudación por local <small>el efectivo entra al cajón del local, lo virtual al banco</small></h2>
+    <h2>1 · Recaudación por turno <small>el efectivo entra al cajón del local, lo virtual al banco</small></h2>
+    <p class="aviso" id="rec-inf" hidden style="background:var(--info-soft);color:var(--info)"></p>
     <div class="scroll"><table>
-      <thead><tr><th>Local</th><th class="num">Efectivo</th><th class="num">Virtual</th><th class="num">Total</th></tr></thead>
+      <thead><tr><th>Local</th><th>Turno</th><th class="num">Efectivo</th><th class="num">Virtual</th><th class="num">Total local</th></tr></thead>
       <tbody id="rec-body"></tbody>
-      <tfoot><tr><td>Total</td><td class="num" id="t-ef"></td><td class="num" id="t-vi"></td><td class="num" id="t-to"></td></tr></tfoot>
+      <tfoot><tr><td>Total</td><td></td><td class="num" id="t-ef"></td><td class="num" id="t-vi"></td><td class="num" id="t-to"></td></tr></tfoot>
     </table></div>
   </section>
 
@@ -483,9 +489,9 @@ tr.sub td{color:var(--muted);font-size:13px}
   <section class="box">
     <h2>Personal <small id="e-count"></small></h2>
     <div class="summary">
-      <div class="cell hero"><span class="k">Próximo aguinaldo</span><span class="v" id="e-sac"></span><span class="s" id="e-sac-s"></span></div>
+      <div class="cell hero dn-only"><span class="k">Próximo aguinaldo</span><span class="v" id="e-sac"></span><span class="s" id="e-sac-s"></span></div>
       <div class="cell"><span class="k">En blanco</span><span class="v" id="e-bl"></span><span class="s" id="e-bl-s"></span></div>
-      <div class="cell"><span class="k">Vacaciones <span id="e-vac-y"></span></span><span class="v" id="e-vac"></span><span class="s" id="e-vac-s"></span></div>
+      <div class="cell dn-only"><span class="k">Vacaciones <span id="e-vac-y"></span></span><span class="v" id="e-vac"></span><span class="s" id="e-vac-s"></span></div>
     </div>
   </section>
   <section class="box">
@@ -506,15 +512,15 @@ tr.sub td{color:var(--muted);font-size:13px}
     <p class="note">Días, horas y "le corresponde" salen de la app de Horarios (hasta hoy). "Pagado en caja" sale de lo que se cargó en "Cargar día". Si alguien no aparece, revisá en su ficha el "Nombre en el horario".</p>
   </section>
   <section class="box">
-    <h2>Vacaciones y aguinaldo</h2>
+    <h2>Fichas de empleados <small class="dn-only">con vacaciones y aguinaldo</small></h2>
     <div class="row">
       <span class="seg" role="group" aria-label="Filtro"><button class="segb" data-ef="act" aria-pressed="true">Activos</button><button class="segb" data-ef="bl" aria-pressed="false">En blanco</button><button class="segb" data-ef="nr" aria-pressed="false">Sin registrar</button><button class="segb" data-ef="baja" aria-pressed="false">Bajas</button></span>
     </div>
     <div class="scroll"><table>
-      <thead><tr><th>Empleado</th><th>Ingreso</th><th class="num">Antigüedad</th><th class="num">Vacaciones</th><th class="num">Aguinaldo</th><th></th></tr></thead>
+      <thead><tr><th>Empleado</th><th>Ingreso</th><th class="num">Antigüedad</th><th class="num dn-only">Vacaciones</th><th class="num dn-only">Aguinaldo</th><th></th></tr></thead>
       <tbody id="e-lista"></tbody>
     </table></div>
-    <p class="note">Vacaciones según la Ley de Contrato de Trabajo: 14 días hasta 5 años de antigüedad, 21 hasta 10, 28 hasta 20 y 35 después, contando la antigüedad al 31 de diciembre. Se toman entre el 1 de octubre y el 30 de abril, avisando por escrito con 30 días de anticipación. Si no trabajó la mitad de los días hábiles del año, corresponde 1 día cada 20 trabajados. Aguinaldo: 50% del mejor sueldo del semestre, proporcional a lo trabajado; vence el 30 de junio y el 18 de diciembre. Son cálculos estimados: el oficial lo hace el contador.</p>
+    <p class="note dn-only">Vacaciones según la Ley de Contrato de Trabajo: 14 días hasta 5 años de antigüedad, 21 hasta 10, 28 hasta 20 y 35 después, contando la antigüedad al 31 de diciembre. Se toman entre el 1 de octubre y el 30 de abril, avisando por escrito con 30 días de anticipación. Si no trabajó la mitad de los días hábiles del año, corresponde 1 día cada 20 trabajados. Aguinaldo: 50% del mejor sueldo del semestre, proporcional a lo trabajado; vence el 30 de junio y el 18 de diciembre. Son cálculos estimados: el oficial lo hace el contador.</p>
   </section>
   <section class="box">
     <h2 id="e-form-t">Agregar empleado</h2>
@@ -684,7 +690,9 @@ async function put(col,id,doc){await apiPost({accion:'put',col,id,doc})}
 async function del(col,id){await apiPost({accion:'del',col,id})}
 
 /* ---------- datos ---------- */
-const DB={dias:{},fijos:{},pagosfijos:{},cheques:{},empleados:{},proveedores:{},provmovs:{},adelantos:{},horarios:{},horcfg:null,ajustes:[],mios:{},config:{id:'general'}};
+const TNM={m:'Mañana',t:'Tarde',n:'Noche'};
+const cierreDe=(f,l,t)=>(DB.cierres||{})[f+'_'+l+'_'+t];
+const DB={cierres:{},dias:{},fijos:{},pagosfijos:{},cheques:{},empleados:{},proveedores:{},provmovs:{},adelantos:{},horarios:{},horcfg:null,ajustes:[],mios:{},config:{id:'general'}};
 /* ---- vínculo con la app de horarios ---- */
 function hTurno(lid,t,f){const g=LOCALES.find(l=>l.id===lid).g,wd=toDate(f).getUTCDay();if(g==='24'||(wd>=4&&wd<=6))return 8;if(t!=='n')return 7;return g==='02'?6.5:4}
 const lunesH=f=>{const w=(toDate(f).getUTCDay()+6)%7;return addDays(f,-w)};
@@ -711,12 +719,13 @@ const FRQ_OPTS=sel=>'<option value="">—</option>'+Object.values(DB.empleados||
 const empN=id=>{const e=(DB.empleados||{})[id];return e?(e.nombre+' '+(e.apellido||'')).trim():'—'};
 const provName=id=>((DB.proveedores||{})[id]||{}).nombre||'Proveedor';
 function normDia(d){
-  d={...d};d.frq=d.frq||{};d.frq2=d.frq2||{};d.hf1=d.hf1||{};d.hf2=d.hf2||{};d.fq=d.fq||{};d.fh=d.fh||{};d.arq=d.arq||{};d.rec=d.rec||{};d.horas=d.horas||{};d.horasFr=d.horasFr||{};d.nota=d.nota||'';
+  d={...d};d.recT=d.recT||{};d.frq=d.frq||{};d.frq2=d.frq2||{};d.hf1=d.hf1||{};d.hf2=d.hf2||{};d.fq=d.fq||{};d.fh=d.fh||{};d.arq=d.arq||{};d.rec=d.rec||{};d.horas=d.horas||{};d.horasFr=d.horasFr||{};d.nota=d.nota||'';
+  LOCALES.forEach(l=>{const r=d.rec[l.id];if(!d.recT[l.id]&&r&&(r.ef||r.vi))d.recT[l.id]={m:{ef:r.ef||0,vi:r.vi||0}}});
   // días guardados con el formato anterior (franquero 1 y 2)
   LOCALES.forEach(l=>{if(!d.fq[l.id]&&(d.frq[l.id]||d.frq2[l.id]||d.horasFr[l.id])){d.fq[l.id]={m:d.frq[l.id]||''};d.fh[l.id]={m:d.hf1[l.id]??d.horasFr[l.id]??0};if(d.frq2[l.id]||d.hf2[l.id]){d.fq[l.id].t=d.frq2[l.id]||'';d.fh[l.id].t=d.hf2[l.id]||0}}});
   if(!d.movs){d.movs=(d.pagos||[]).map(p=>({id:uid('m'),clase:'pago',origen:p.medio==='Virtual'?'banco':'general',destino:'',cat:p.tipo==='Gasto general'?'Gasto general':p.tipo,local:p.local||'',detalle:p.detalle||'',monto:p.monto||0}))}
   delete d.pagos;return d}
-function blank(f){return{fecha:f,mes:f.slice(0,7),rec:{},horas:{},horasFr:{},frq:{},frq2:{},hf1:{},hf2:{},fq:{},fh:{},movs:[],arq:{},nota:''}}
+function blank(f){return{fecha:f,mes:f.slice(0,7),rec:{},recT:{},horas:{},horasFr:{},frq:{},frq2:{},hf1:{},hf2:{},fq:{},fh:{},movs:[],arq:{},nota:''}}
 
 /* calcula lo que hace un día en cada caja */
 function diaCalc(d){
@@ -778,10 +787,10 @@ function saldos(hasta){const s={};ACC.forEach(a=>s[a.id]=0);ledger().forEach(e=>
 let state=blank(hoyISO()),saved=null,dirty=false,LAST_SALDOS={};
 function buildDay(){
   const rb=$('rec-body');rb.innerHTML='';const sb=$('su-body');sb.innerHTML='';
-  LOCALES.forEach(l=>{const r=state.rec[l.id]||{};
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="loc">${l.n}</td><td><input class="f money" id="ef-${l.id}" inputmode="decimal" placeholder="0"></td><td><input class="f money" id="vi-${l.id}" inputmode="decimal" placeholder="0"></td><td class="num" id="to-${l.id}"></td>`;
-    rb.appendChild(tr);tr.querySelector('#ef-'+l.id).value=fmtIn(r.ef);tr.querySelector('#vi-'+l.id).value=fmtIn(r.vi);
+  LOCALES.forEach(l=>{['m','t','n'].forEach((t,k)=>{const x=(state.recT[l.id]||{})[t]||{};
+      const tr=document.createElement('tr');if(!k)tr.className='first';
+      tr.innerHTML=(k?'':`<td class="loc" rowspan="3">${l.n}</td>`)+`<td class="tn">${TNM[t]}</td><td><input class="f money" id="ef-${l.id}-${t}" inputmode="decimal" placeholder="0" aria-label="Efectivo ${l.n} ${TNM[t]}"><span class="inf" id="ie-${l.id}-${t}"></span></td><td><input class="f money" id="vi-${l.id}-${t}" inputmode="decimal" placeholder="0" aria-label="Virtual ${l.n} ${TNM[t]}"><span class="inf" id="iv-${l.id}-${t}"></span></td>`+(k?'':`<td class="num" rowspan="3" id="to-${l.id}"></td>`);
+      rb.appendChild(tr);tr.querySelector(`#ef-${l.id}-${t}`).value=fmtIn(x.ef);tr.querySelector(`#vi-${l.id}-${t}`).value=fmtIn(x.vi)});
     const hs=state.horas[l.id]??horasDefault(l.g,state.fecha);
     const ts=document.createElement('tr');
     ts.innerHTML=`<td class="loc">${l.n}</td><td class="num"><input class="f hrs" id="hs-${l.id}" inputmode="decimal"></td>`+['m','t','n'].map(t=>`<td><span class="row" style="flex-wrap:nowrap"><select class="f" id="fq-${l.id}-${t}" style="min-width:104px" aria-label="Franquero ${t}">${FRQ_OPTS((state.fq[l.id]||{})[t])}</select><input class="f hrs" id="fh-${l.id}-${t}" inputmode="decimal" placeholder="0" style="max-width:62px" aria-label="Horas"></span></td>`).join('')+`<td class="num" id="fr-${l.id}"></td><td class="num" id="bo-${l.id}"></td>`;
@@ -812,12 +821,16 @@ function buildMovs(){
     c.appendChild(row)});
   $('movs-count').textContent=state.movs.length?state.movs.length+(state.movs.length===1?' movimiento':' movimientos'):'';
 }
-function readDay(){LOCALES.forEach(l=>{state.rec[l.id]={ef:parse($('ef-'+l.id).value),vi:parse($('vi-'+l.id).value)};
+function readDay(){LOCALES.forEach(l=>{state.recT[l.id]={};let ef=0,vi=0;['m','t','n'].forEach(t=>{const a=parse($(`ef-${l.id}-${t}`).value),b=parse($(`vi-${l.id}-${t}`).value);if(a||b)state.recT[l.id][t]={ef:a,vi:b};ef+=a;vi+=b});state.rec[l.id]={ef,vi};
   state.horas[l.id]=parse($('hs-'+l.id).value);state.fq[l.id]={};state.fh[l.id]={};let tot=0;['m','t','n'].forEach(t=>{const e=$(`fq-${l.id}-${t}`).value,h=parse($(`fh-${l.id}-${t}`).value);if(e||h){state.fq[l.id][t]=e;state.fh[l.id][t]=h;tot+=h}});state.horasFr[l.id]=tot});
   const arq={};document.querySelectorAll('[data-arq]').forEach(i=>{if(i.value.trim()!=='')arq[i.dataset.arq]={contado:parse(i.value)}});state.arq=arq;
   state.nota=$('nota').value;markDirty();calc()}
 function calc(){
   const r=diaCalc(state);const vh=state.vh||VH;
+  LOCALES.forEach(l=>['m','t','n'].forEach(t=>{const c=cierreDe(state.fecha,l.id,t),x=(state.recT[l.id]||{})[t]||{},ie=$(`ie-${l.id}-${t}`),iv=$(`iv-${l.id}-${t}`);if(!ie)return;
+    if(!c){ie.textContent='';iv.textContent='';return}
+    const se=Math.round(x.ef||0)===Math.round(c.ef),sv=Math.round(x.vi||0)===Math.round(c.vi),q=c.quien?' · '+c.quien:'';
+    ie.className='inf '+(se?'ok':'dif');ie.textContent=(se?'✓ ':'turno: '+fmt(c.ef))+(se?'informado'+q:'');iv.className='inf '+(sv?'ok':'dif');iv.textContent=sv?'✓':'turno: '+fmt(c.vi)}));
   LOCALES.forEach(l=>{const x=state.rec[l.id]||{};$('to-'+l.id).textContent=fmt((x.ef||0)+(x.vi||0));
     const p=r.porLoc[l.id];$('fr-'+l.id).textContent=p.fr?fmt(p.fr):'—';$('bo-'+l.id).textContent=fmt(p.bol)});
   $('t-ef').textContent=fmt(r.ef);$('t-vi').textContent=fmt(r.vi);$('t-to').textContent=fmt(r.ef+r.vi);
@@ -861,6 +874,12 @@ function markDirty(){dirty=true;$('savemsg').textContent='Hay cambios sin guarda
 function setDayState(){$('dayname').textContent=DIAS[toDate(state.fecha).getUTCDay()];
   const ex=!!DB.dias[state.fecha];$('daystate').textContent=ex?(state.fecha<hoyISO()?'Cerrado':'Guardado'):'Sin cargar';$('daystate').className='pill'+(ex?'':' warn');lockState()}
 function openDay(f){$('fecha').value=f;const d=DB.dias[f];state=d?normDia(JSON.parse(JSON.stringify(d))):blank(f);
+  let notaR='';const CI=Object.values(DB.cierres||{}).filter(c=>c.fecha===f);
+  if(!d&&CI.length){CI.forEach(c=>{(state.recT[c.local]=state.recT[c.local]||{})[c.turno]={ef:c.ef,vi:c.vi}});
+    LOCALES.forEach(l=>{const o=state.recT[l.id]||{};state.rec[l.id]={ef:Object.values(o).reduce((a,x)=>a+(x.ef||0),0),vi:Object.values(o).reduce((a,x)=>a+(x.vi||0),0)}});
+    notaR='Completado con lo que informaron los turnos ('+CI.length+' de 27). Cuando cuenten la plata, corregí lo que no coincida: la diferencia queda marcada en naranja.'}
+  else if(d&&CI.length)notaR=CI.length+' turnos informaron su caja: si algo no coincide con lo cargado, aparece en naranja debajo del monto.';
+  $('rec-inf').textContent=notaR;$('rec-inf').hidden=!notaR;
   let notaH='';const L=horDia(f);
   if(!d&&L){const partes=[],faltan=new Set();LOCALES.forEach(l=>{const fr=L.filter(x=>x.l===l.id&&esFranq(x.n));if(!fr.length)return;
       state.fq[l.id]={};state.fh[l.id]={};fr.forEach(x=>{const e=empByHor(x.n);if(!e)faltan.add(niceH(x.n));state.fq[l.id][x.t]=e?e.id:'';state.fh[l.id][x.t]=x.h});
@@ -1068,7 +1087,7 @@ function aguinaldo(e,hoy){const y=+hoy.slice(0,4);let ini,fin,vto,n;
   const es=empSueldo(e),base=es.s+es.p;return{vto,n,monto:base?base/2*Math.min(1,dias/tot):0,prop:dias<tot,variable:!base}}
 const fDMA=f=>f?f.slice(8)+'/'+f.slice(5,7)+'/'+f.slice(0,4):'—';
 const waNum=t=>{let d=String(t||'').replace(/\D/g,'');if(!d)return'';if(d.startsWith('54'))d=d.slice(2);if(d.startsWith('0'))d=d.slice(1);d=d.replace(/^(\d{2,4})15/,'$1');return'549'+d};
-function renderEmpleados(){
+function renderEmpleados(){document.querySelectorAll('.dn-only').forEach(e=>e.hidden=!DUENO);
   const hoy=hoyISO(),Y=+hoy.slice(0,4),E=Object.values(DB.empleados||{});
   const act=E.filter(e=>!e.baja||e.baja>=hoy);
   const vY=hoy>=Y+'-10-01'||hoy>Y+'-04-30'?Y:Y-1;
@@ -1083,8 +1102,8 @@ function renderEmpleados(){
   $('e-lista').innerHTML=list.length?list.map(e=>{const a=antig(e.ingreso,hoy),v=vacaciones(e,vY),s=aguinaldo(e,hoy),w=waNum(e.tel);
     return `<tr><td><b>${esc(e.nombre)} ${esc(e.apellido)}</b> <span class="pill ${e.blanco?'':'warn'}">${e.blanco?'en blanco':'sin registrar'}</span><div class="note">${esc(e.tipo)}${e.local?' · '+esc(locN(e.local)):''}${e.tel?' · '+esc(e.tel):''}${e.baja?' · baja '+fDMA(e.baja):''}</div></td>
       <td>${fDMA(e.ingreso)}</td><td class="num">${antigT(a)}</td>
-      <td class="num">${v?v.dias+' días'+(v.prop?'<div class="note">proporcional</div>':''):'—'}</td>
-      <td class="num">${s.nada?'—':s.variable?'<span class="note">según mejor mes</span>':fmt(s.monto)}${!s.nada&&s.prop?'<div class="note">proporcional</div>':''}</td>
+      ${DUENO?`<td class="num">${v?v.dias+' días'+(v.prop?'<div class="note">proporcional</div>':''):'—'}</td>
+      <td class="num">${s.nada?'—':s.variable?'<span class="note">según mejor mes</span>':fmt(s.monto)}${!s.nada&&s.prop?'<div class="note">proporcional</div>':''}</td>`:''}
       <td class="num">${w?`<a class="mini" href="https://wa.me/${w}" target="_blank" rel="noopener">WhatsApp</a> `:''}<button class="mini" data-eed="${esc(e.id)}">Editar</button></td></tr>`}).join('')
     :`<tr><td colspan="6" class="empty">${E.length?'No hay empleados en este filtro.':'Todavía no cargaste empleados. Agregalos uno por uno abajo, o pegá la lista entera en "Cargar varios de una vez".'}</td></tr>`;
   $('e-lista').querySelectorAll('[data-eed]').forEach(b=>b.onclick=()=>editEmp(b.dataset.eed));renderSueldos()}
@@ -1351,7 +1370,7 @@ async function conectar(){
     DB.proveedores={};(j.proveedores||[]).forEach(x=>DB.proveedores[x.id]=x);
     DB.provmovs={};(j.provmovs||[]).forEach(x=>DB.provmovs[x.id]=x);
     DB.adelantos={};(j.adelantos||[]).forEach(x=>DB.adelantos[x.id]=x);
-    DB.ajustes=j.ajustes||[];
+    DB.ajustes=j.ajustes||[];DB.cierres={};(j.cierres||[]).forEach(x=>DB.cierres[x.id]=x);
     DB.horarios={};(j.horarios||[]).forEach(x=>DB.horarios[x.id]=x);DB.horcfg=j.horcfg||null;fillHorSel($('e-hor').value);
     LIM=DB.config.limiteCheques||0;$('c-limite').value=fmtIn(LIM);
     $('status').textContent='Conectado a la planilla de caja';verSetup(false);if(!DUENO&&ls.get('caja_dueno')){DUENO=ls.get('caja_dueno');cargarMiCaja()}
