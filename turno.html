@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Caja del Turno</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: una sola columna para el celular del local — elegir turno, dos montos grandes, enviar */
+:root{
+  --bg:#F3F5F4; --surface:#FFFFFF; --ink:#13201C; --muted:#5D6B66; --line:#DCE3E0;
+  --accent:#1E6B47; --accent-ink:#FFFFFF; --accent-soft:#E2F0E8; --warn:#9A5B00; --warn-soft:#FFF1D6; --neg:#A3261B; --neg-soft:#FBE4E1;
+  --f-body:"Archivo","Helvetica Neue",Arial,sans-serif; --f-num:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1614; --surface:#17211E; --ink:#E6EEEA; --muted:#93A39D; --line:#2A3833;
+  --accent:#4FBF86; --accent-ink:#0B1411; --accent-soft:#1B3328; --warn:#F0B45A; --warn-soft:#3A2A10; --neg:#F08A7E; --neg-soft:#3A1A16; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1614; --surface:#17211E; --ink:#E6EEEA; --muted:#93A39D; --line:#2A3833;
+  --accent:#4FBF86; --accent-ink:#0B1411; --accent-soft:#1B3328; --warn:#F0B45A; --warn-soft:#3A2A10; --neg:#F08A7E; --neg-soft:#3A1A16; color-scheme:dark}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45}
+[hidden]{display:none!important}
+.wrap{max-width:520px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:flex;flex-direction:column;gap:16px}
+h1{font-size:22px;font-weight:800;margin:0;letter-spacing:-.01em}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:14px;margin:2px 0 0}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+label.l{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+input.f,select.f,textarea.f{font:500 17px var(--f-body);padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);width:100%}
+input.money{font:600 26px var(--f-num);text-align:right}
+textarea.f{min-height:70px;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{appearance:none;border:none;background:transparent;color:var(--ink);font:700 15px var(--f-body);padding:12px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+.seg button small{font:500 12px var(--f-num);color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.seg button[aria-pressed="true"] small{color:var(--surface);opacity:.8}
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:700 16px var(--f-body);padding:14px;border-radius:12px;cursor:pointer;width:100%}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-size:18px}
+.btn:disabled{opacity:.5}
+.row{display:flex;gap:10px;align-items:center}
+.row > *{flex:1;min-width:0}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.msg{font-size:14px;margin:0}
+.msg.bad{color:var(--neg)}
+.ok{background:var(--accent-soft);border-color:transparent;text-align:center}
+.ok b{font-size:20px;color:var(--accent)}
+.res{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:15px;text-align:left}
+.res span:nth-child(even){font-family:var(--f-num);font-weight:600;text-align:right}
+.linkbtn{appearance:none;border:none;background:none;color:var(--muted);font:14px var(--f-body);text-decoration:underline;cursor:pointer;padding:0;align-self:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Caja del <span>turno</span></h1>
+    <p class="sub" id="sub">Drugstore · informá el efectivo y lo virtual al terminar tu turno</p>
+  </header>
+
+  <!-- configuración del equipo -->
+  <section class="box" id="setup" hidden>
+    <label class="l" for="s-local">¿En qué local está este celular?</label>
+    <select class="f" id="s-local"></select>
+    <label class="l" for="s-clave">Clave de turno</label>
+    <input class="f" id="s-clave" type="password" placeholder="Te la pasa tu encargada">
+    <button class="btn primary" id="s-ok">Listo</button>
+    <p class="msg" id="s-msg"></p>
+  </section>
+
+  <!-- formulario -->
+  <section class="box" id="form" hidden>
+    <label class="l">Turno</label>
+    <div class="seg" role="group" aria-label="Turno" id="turnos"></div>
+    <div class="row"><input type="date" class="f" id="fecha" aria-label="Fecha del turno"><span class="hint" id="fecha-t" style="flex:1.2"></span></div>
+    <label class="l" for="quien">Tu nombre</label>
+    <input class="f" id="quien" placeholder="Ej.: Valentín" autocomplete="name">
+    <label class="l" for="ef">Efectivo del turno</label>
+    <input class="f money" id="ef" inputmode="decimal" placeholder="0">
+    <p class="hint">Lo que queda en el sobre o la caja para la oficina.</p>
+    <label class="l" for="vi">Virtual del turno</label>
+    <input class="f money" id="vi" inputmode="decimal" placeholder="0">
+    <p class="hint">Tarjetas, QR y transferencias, según el cierre del sistema.</p>
+    <label class="l" for="nota">Nota (opcional)</label>
+    <textarea class="f" id="nota" placeholder="Ej.: faltaron $500, se rompió el posnet"></textarea>
+    <button class="btn primary" id="enviar">Enviar a la oficina</button>
+    <p class="msg" id="msg"></p>
+  </section>
+
+  <!-- enviado -->
+  <section class="box ok" id="hecho" hidden>
+    <b>Enviado ✓</b>
+    <div class="res" id="res"></div>
+    <p class="hint">Si te equivocaste, volvé a enviar el mismo turno: se reemplaza.</p>
+    <button class="btn" id="otro">Volver</button>
+  </section>
+
+  <button class="linkbtn" id="cambiar" hidden>Cambiar local o clave de este celular</button>
+</div>
+
+<script>
+const URL_FIJA='https://script.google.com/macros/s/AKfycbyzKNTjgjb42BN7rGMnu1esTx3K67YwZdlqylcOvDPDmpfBcRamrW9022llbkIzHOTIkw/exec';
+const LOCALES=[
+  {id:'tandil',n:'25 y Tandil',g:'02'},{id:'sanluis',n:'San Luis',g:'02'},{id:'burgos',n:'Burgos',g:'00'},
+  {id:'caneva',n:'Caneva',g:'24'},{id:'irigoyen',n:'Irigoyen',g:'00'},{id:'mitre',n:'Mitre',g:'02'},
+  {id:'peron',n:'Perón',g:'00'},{id:'piazza',n:'Piazza',g:'02'},{id:'diab',n:'A. Diab',g:'02'}];
+const TN={m:'Mañana',t:'Tarde',n:'Noche'},DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const $=id=>document.getElementById(id);
+const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
+const parse=s=>{s=String(s||'').trim().replace(/\$|\s/g,'');if(!s)return 0;if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');else if(/^\d{1,3}(\.\d{3})+$/.test(s))s=s.replace(/\./g,'');const v=parseFloat(s);return isFinite(v)?v:0};
+const fmt=n=>'$ '+Math.round(n||0).toLocaleString('es-AR');
+const fmtIn=n=>n?Number(n).toLocaleString('es-AR',{maximumFractionDigits:2}):'';
+const iso=d=>d.toISOString().slice(0,10);
+const toDate=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(Date.UTC(y,m-1,d))};
+
+let LOCAL=ls.get('turno_local')||'',CLAVE=ls.get('turno_clave')||'',turno='m';
+function horario(lid,t,f){const g=(LOCALES.find(l=>l.id===lid)||{g:'02'}).g,wd=toDate(f).getUTCDay();
+  if(g==='24'||(wd>=4&&wd<=6))return{m:'06 a 14',t:'14 a 22',n:'22 a 06'}[t];
+  return t==='m'?'06 a 13':t==='t'?'13 a 20':(g==='02'?'20 a 02:30':'20 a 00')}
+/* sugiere el turno que acaba de terminar (hora de Argentina menos 45 minutos) */
+function sugerir(){const ar=new Date(Date.now()-3*3600e3-45*60e3),h=ar.getUTCHours(),wd=ar.getUTCDay(),g=(LOCALES.find(l=>l.id===LOCAL)||{g:'02'}).g;
+  let f=iso(ar),t;const largo=g==='24'||(wd>=4&&wd<=6);
+  if(h<6){t='n';f=iso(new Date(ar.getTime()-864e5))}
+  else if(largo)t=h<14?'m':h<22?'t':'n';
+  else t=h<13?'m':h<20?'t':'n';
+  return{f,t}}
+function pintarTurnos(){const f=$('fecha').value;
+  $('turnos').innerHTML=['m','t','n'].map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===turno}">${TN[t]}<small>${horario(LOCAL,t,f)}</small></button>`).join('');
+  $('turnos').querySelectorAll('button').forEach(b=>b.onclick=()=>{turno=b.dataset.t;pintarTurnos()});
+  const d=toDate(f);$('fecha-t').textContent=DIAS[d.getUTCDay()]+(turno==='n'?' (la noche que empezó ese día)':'')}
+function verForm(){const l=LOCALES.find(x=>x.id===LOCAL);$('sub').textContent=(l?l.n:'')+' · informá el efectivo y lo virtual al terminar tu turno';
+  $('setup').hidden=true;$('hecho').hidden=true;$('form').hidden=false;$('cambiar').hidden=false;
+  const s=sugerir();turno=s.t;$('fecha').value=s.f;$('quien').value=ls.get('turno_quien')||'';$('ef').value='';$('vi').value='';$('nota').value='';$('msg').textContent='';pintarTurnos()}
+function verSetup(){$('setup').hidden=false;$('form').hidden=true;$('hecho').hidden=true;$('cambiar').hidden=true;$('s-local').value=LOCAL;$('s-clave').value=''}
+$('s-local').innerHTML='<option value="">Elegí el local</option>'+LOCALES.map(l=>`<option value="${l.id}">${l.n}</option>`).join('');
+$('s-ok').onclick=async()=>{const l=$('s-local').value,c=$('s-clave').value.trim();if(!l||!c){$('s-msg').textContent='Elegí el local y escribí la clave.';return}
+  $('s-msg').className='msg';$('s-msg').textContent='Verificando…';
+  try{const r=await fetch(URL_FIJA+'?'+new URLSearchParams({accion:'okTurno',clave:c}));const j=await r.json();if(!j.ok)throw new Error('clave');
+    LOCAL=l;CLAVE=c;ls.set('turno_local',l);ls.set('turno_clave',c);verForm()}
+  catch(e){$('s-msg').className='msg bad';$('s-msg').textContent=e.message==='clave'?'La clave no es correcta. Pedísela a tu encargada.':'No hay conexión. Probá de nuevo.'}};
+$('fecha').onchange=pintarTurnos;
+['ef','vi'].forEach(i=>$(i).addEventListener('blur',e=>{e.target.value=fmtIn(parse(e.target.value))}));
+$('enviar').onclick=async()=>{const q=$('quien').value.trim(),ef=parse($('ef').value),vi=parse($('vi').value);
+  if(!q){$('msg').className='msg bad';$('msg').textContent='Escribí tu nombre.';return}
+  if(!ef&&!vi&&$('enviar').dataset.cero!=='1'){$('msg').className='msg bad';$('msg').textContent='Los dos montos están en cero. Si es así, tocá Enviar de nuevo.';$('enviar').dataset.cero='1';return}
+  $('enviar').dataset.cero='';ls.set('turno_quien',q);$('enviar').disabled=true;$('msg').className='msg';$('msg').textContent='Enviando…';
+  const cierre={fecha:$('fecha').value,local:LOCAL,turno,ef,vi,quien:q,nota:$('nota').value.trim()};
+  try{const r=await fetch(URL_FIJA,{method:'POST',body:JSON.stringify({accion:'cierreTurno',clave:CLAVE,cierre})});const j=await r.json();
+    if(!j.ok)throw new Error(j.error||'error');
+    const l=LOCALES.find(x=>x.id===LOCAL);
+    $('res').innerHTML=`<span>Local</span><span>${l.n}</span><span>Turno</span><span>${TN[turno]} ${cierre.fecha.slice(8)}/${cierre.fecha.slice(5,7)}</span><span>Efectivo</span><span>${fmt(ef)}</span><span>Virtual</span><span>${fmt(vi)}</span><span>Total</span><span>${fmt(ef+vi)}</span>`;
+    $('form').hidden=true;$('hecho').hidden=false}
+  catch(e){$('msg').className='msg bad';$('msg').textContent=e.message==='clave'?'La clave de este celular ya no sirve: tocá "Cambiar local o clave" abajo.':'No se pudo enviar. Revisá internet y tocá Enviar de nuevo.'}
+  $('enviar').disabled=false};
+$('otro').onclick=verForm;
+$('cambiar').onclick=verSetup;
+if(LOCAL&&CLAVE)verForm();else verSetup();
+</script>
+</body>
+</html>
