@@ -832,8 +832,8 @@ function calc(){
   const r=diaCalc(state);const vh=state.vh||VH;
   LOCALES.forEach(l=>['m','t','n'].forEach(t=>{const c=cierreDe(state.fecha,l.id,t),x=(state.recT[l.id]||{})[t]||{},ie=$(`ie-${l.id}-${t}`),iv=$(`iv-${l.id}-${t}`);if(!ie)return;
     if(!c){ie.textContent='';iv.textContent='';return}
-    const cg=c.ef+gastosCierre(c),se=Math.round(x.ef||0)===Math.round(cg),sv=Math.round(x.vi||0)===Math.round(c.vi),q=c.quien?' · '+c.quien:'';
-    ie.className='inf '+(se?'ok':'dif');ie.textContent=(se?'✓ ':'turno: '+fmt(cg))+(se?'informado'+q:'')+(gastosCierre(c)?' (incl. gastos '+fmt(gastosCierre(c))+')':'');iv.className='inf '+(sv?'ok':'dif');iv.textContent=sv?'✓':'turno: '+fmt(c.vi)}));
+    const cg=c.ef,se=Math.round(x.ef||0)===Math.round(cg),sv=Math.round(x.vi||0)===Math.round(c.vi),q=c.quien?' · '+c.quien:'';
+    ie.className='inf '+(se?'ok':'dif');ie.textContent=(se?'✓ ':'turno: '+fmt(cg))+(se?'informado'+q:'');iv.className='inf '+(sv?'ok':'dif');iv.textContent=sv?'✓':'turno: '+fmt(c.vi)}));
   LOCALES.forEach(l=>{const x=state.rec[l.id]||{};$('to-'+l.id).textContent=fmt((x.ef||0)+(x.vi||0));
     const p=r.porLoc[l.id];$('fr-'+l.id).textContent=p.fr?fmt(p.fr):'—';$('bo-'+l.id).textContent=fmt(p.bol)});
   $('t-ef').textContent=fmt(r.ef);$('t-vi').textContent=fmt(r.vi);$('t-to').textContent=fmt(r.ef+r.vi);
@@ -879,9 +879,9 @@ function setDayState(){$('dayname').textContent=DIAS[toDate(state.fecha).getUTCD
 function openDay(f){$('fecha').value=f;const d=DB.dias[f];state=d?normDia(JSON.parse(JSON.stringify(d))):blank(f);
   let notaR='';const CI=Object.values(DB.cierres||{}).filter(c=>c.fecha===f);
   let gTot=0;
-  if(!d&&CI.length){CI.forEach(c=>{const g=gastosCierre(c);gTot+=g;(state.recT[c.local]=state.recT[c.local]||{})[c.turno]={ef:c.ef+g,vi:c.vi};state.movs.push(...movsCierre(c))});
+  if(!d&&CI.length){CI.forEach(c=>{const g=gastosCierre(c);gTot+=g;(state.recT[c.local]=state.recT[c.local]||{})[c.turno]={ef:c.ef,vi:c.vi};state.movs.push(...movsCierre(c))});
     LOCALES.forEach(l=>{const o=state.recT[l.id]||{};state.rec[l.id]={ef:Object.values(o).reduce((a,x)=>a+(x.ef||0),0),vi:Object.values(o).reduce((a,x)=>a+(x.vi||0),0)}});
-    notaR='Completado con lo que informaron los turnos ('+CI.length+' de 27).'+(gTot?' El efectivo incluye '+fmt(gTot)+' de gastos que pagaron en los locales: están cargados abajo, en Pagos.':'')+' Cuando cuenten la plata, corregí lo que no coincida: la diferencia queda marcada en naranja.'}
+    notaR='Completado con lo que informaron los turnos ('+CI.length+' de 27).'+(gTot?' Los gastos que pagaron en los locales ('+fmt(gTot)+') están cargados abajo, en Pagos: salen del cajón de cada local, no del efectivo del turno.':'')+' Cuando cuenten la plata, corregí lo que no coincida: la diferencia queda marcada en naranja.'}
   else if(d&&CI.length){notaR=CI.length+' turnos informaron su caja: si algo no coincide con lo cargado, aparece en naranja debajo del monto.';
     const ya=new Set((state.movs||[]).map(m=>m.cierre).filter(Boolean)),falt=CI.flatMap(movsCierre).filter(m=>!ya.has(m.cierre));
     if(falt.length)notaR+=` Hay ${falt.length} gasto(s) informado(s) por ${fmt(falt.reduce((a,m)=>a+m.monto,0))} que todavía no están en Pagos. <button class="btn sm" id="add-gc">Sumarlos</button>`}
@@ -898,7 +898,7 @@ function openDay(f){$('fecha').value=f;const d=DB.dias[f];state=d?normDia(JSON.p
   dirty=false;$('savemsg').textContent='';buildDay();setDayState();
   const bg=$('add-gc');if(bg)bg.onclick=()=>{const ya=new Set(state.movs.map(m=>m.cierre).filter(Boolean));const add=CI.flatMap(movsCierre).filter(m=>!ya.has(m.cierre));
     add.forEach(m=>{state.movs.push(m);const r=(state.recT[m.local]=state.recT[m.local]||{});});
-    buildMovs();markDirty();calc();bg.remove();$('rec-inf').append(' Agregados: revisá el efectivo de esos turnos (tiene que incluir lo gastado) y guardá.')}}
+    buildMovs();markDirty();calc();bg.remove();$('rec-inf').append(' Agregados: revisalos y guardá el día.')}}
 async function guardar(){
   if(!online)return;readDay();$('guardar').disabled=true;$('savemsg').textContent='Guardando…';
   const r=diaCalc(state);
