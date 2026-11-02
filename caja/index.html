@@ -492,6 +492,13 @@ tr.sub td{color:var(--muted);font-size:13px}
     </div>
   </section>
   <section class="box">
+    <h2>Cargar varios de una vez <small>pegá desde Excel o uno por renglón</small></h2>
+    <p class="note">Formato por renglón: Número; Banco; A la orden de; Monto; Fecha de emisión; Fecha de cobro (dd/mm/aaaa); Cobrado (sí/no, opcional). También sirve copiar esas columnas de Excel.</p>
+    <textarea class="f" id="ci-txt" rows="6" placeholder="12345678; Galicia; Arcor; 450.000; 01/11/2026; 15/12/2026&#10;12345679; Nación; Golo Azul; 300000; 01/11/2026; 20/12/2026"></textarea>
+    <div class="row"><button class="btn" id="ci-prev">Revisar</button><button class="btn primary" id="ci-ok" hidden>Cargar</button><span class="note" id="ci-msg"></span></div>
+    <div class="scroll"><table><tbody id="ci-body"></tbody></table></div>
+  </section>
+  <section class="box">
     <h2>Cheques por fecha de cobro
       <span class="seg" role="group" aria-label="Filtro"><button class="segb" data-f="pend" aria-pressed="true">Pendientes</button><button class="segb" data-f="cob" aria-pressed="false">Cobrados</button><button class="segb" data-f="all" aria-pressed="false">Todos</button></span>
     </h2>
@@ -1098,6 +1105,20 @@ function editCheque(id){const c=DB.cheques[id];if(!c)return;cEdit=id;$('c-num').
   $('c-emi').value=c.emision;$('c-cob').value=c.cobro;$('c-nota').value=c.nota;$('c-form-t').textContent='Editar cheque';$('c-guardar').textContent='Guardar cambios';$('c-cancelar').hidden=false;avisoCheque();
   $('c-form-t').scrollIntoView({behavior:'smooth',block:'start'})}
 $('c-cancelar').onclick=cLimpiar;
+let ciLote=[];
+function fechaCh(t){t=String(t||'').trim();let m=t.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);if(m){let y=+m[3];if(y<100)y+=2000;return y+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0')}m=t.match(/^\d{4}-\d{2}-\d{2}$/);return m?t:''}
+$('ci-prev').onclick=()=>{const L=$('ci-txt').value.split(/\n/).map(x=>x.trim()).filter(Boolean);
+  ciLote=L.map(l=>{const c=(l.includes('\t')?l.split('\t'):l.split(';')).map(x=>x.trim());const mo=parse(c[3]),em=fechaCh(c[4]),co=fechaCh(c[5]);
+    return{numero:c[0]||'',banco:c[1]||'',benef:c[2]||'',monto:mo,emision:em||hoyISO(),cobro:co,cobrado:/^(s|si|sí|x|cobrado)$/i.test(c[6]||''),ok:!!(mo&&co)}});
+  const ok=ciLote.filter(x=>x.ok),porDia={};ok.filter(x=>!x.cobrado).forEach(x=>porDia[x.cobro]=(porDia[x.cobro]||0)+x.monto);
+  Object.values(DB.cheques).filter(c=>!c.cobrado).forEach(c=>{if(porDia[c.cobro]!=null)porDia[c.cobro]+=c.monto});
+  $('ci-body').innerHTML=ciLote.map(x=>`<tr><td>${x.ok?'✓':'<span class="neg">revisar</span>'}</td><td>N° ${esc(x.numero)}</td><td>${esc(x.banco)}</td><td>${esc(x.benef)}</td><td class="num">${fmt(x.monto)}</td><td>${x.cobro?fCorta(x.cobro):'<span class="neg">sin fecha</span>'}${LIM&&x.ok&&!x.cobrado&&porDia[x.cobro]>LIM?' <span class="pill neg">día supera el límite</span>':''}</td><td>${x.cobrado?'cobrado':''}</td></tr>`).join('');
+  $('ci-msg').textContent=ok.length+' cheques listos por '+fmt(ok.reduce((a,x)=>a+x.monto,0))+(ciLote.length>ok.length?' · '+(ciLote.length-ok.length)+' sin monto o fecha de cobro (no se cargan)':'');$('ci-ok').hidden=!ok.length};
+$('ci-ok').onclick=async()=>{if(!online){$('ci-msg').textContent='Sin conexión con la planilla.';return}
+  const L=ciLote.filter(x=>x.ok).map(x=>({id:uid('c'),numero:x.numero,banco:x.banco,benef:x.benef,monto:x.monto,emision:x.emision,cobro:x.cobro,nota:'',cobrado:x.cobrado,cobradoEl:x.cobrado?x.cobro:''}));
+  $('ci-ok').disabled=true;$('ci-msg').textContent='Cargando '+L.length+' cheques…';
+  try{await apiPost({accion:'chequesLote',cheques:L});L.forEach(c=>DB.cheques[c.id]=c);$('ci-txt').value='';$('ci-body').innerHTML='';$('ci-ok').hidden=true;$('ci-msg').textContent=L.length+' cheques cargados.';refreshAll()}
+  catch(e){$('ci-msg').textContent='No se pudo cargar. Probá de nuevo.'}$('ci-ok').disabled=false};
 $('c-guardar').onclick=async()=>{const m=parse($('c-monto').value),f=$('c-cob').value;
   if(!m||!f){$('c-msg').textContent='Completá al menos el monto y la fecha de cobro.';return}
   if(!online){$('c-msg').textContent='Sin conexión con la planilla.';return}
