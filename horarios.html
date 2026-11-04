@@ -99,9 +99,14 @@ input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);ou
 .legend span{font-size:12px;display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
 .sw{width:14px;height:14px;border-radius:4px;display:inline-block;border:1px solid var(--line)}
 .plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
-.pitem{display:flex;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px}
-.pitem input[type=color]{width:34px;height:30px;border:none;background:none;padding:0}
-.pitem .n{flex:1;min-width:0;font-weight:600}
+.pitem{display:grid;grid-template-columns:32px minmax(0,1fr);grid-template-areas:"c n" "c a";column-gap:10px;row-gap:2px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.pitem input[type=color]{grid-area:c;width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:none;padding:0;cursor:pointer;-webkit-appearance:none;appearance:none;overflow:hidden}
+.pitem input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+.pitem input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
+.pitem input[type=color]::-moz-color-swatch{border:none;border-radius:7px}
+.pitem .n{grid-area:n;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pitem .acc{grid-area:a;display:flex;gap:12px;flex-wrap:wrap}
+.pitem .mini{white-space:nowrap;padding:2px 0}
 .mini{appearance:none;border:none;background:none;color:var(--muted);font:600 12px var(--f-body);cursor:pointer;text-decoration:underline;padding:2px}
 .alist{display:flex;flex-direction:column;gap:6px}
 .aitem{padding:8px 10px;border-radius:8px;font-size:14px;cursor:pointer;text-align:left;appearance:none;border:none;font-family:var(--f-body)}
@@ -153,6 +158,7 @@ input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);ou
     </div>
     <div class="row adm" hidden id="nueva-sem">
       <span class="note" id="nueva-t">Esta semana todavía no está armada.</span>
+      <button class="btn sm primary" id="gen-nueva">Generar rotando mañana/tarde</button>
       <button class="btn sm" id="copiar">Copiar la semana anterior</button>
       <button class="btn sm" id="vacia">Empezar vacía</button>
       <button class="btn sm primary" id="seed" hidden>Cargar la planilla armada</button>
@@ -160,6 +166,10 @@ input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);ou
     <div class="row" hidden id="plan-nueva">
       <span class="note" id="plan-t">Hay una planilla nueva de noviembre.</span>
       <button class="btn sm primary" id="plan-ok">Aplicar planilla nueva</button>
+    </div>
+    <div class="row" hidden id="gen-row">
+      <button class="btn sm" id="gen-ok">Generar desde la semana anterior</button>
+      <span class="note" id="gen-t">Rota mañana y tarde después del franco y cubre los francos con franqueros.</span>
     </div>
   </section>
   <div class="locgrid" id="locs"></div>
@@ -277,7 +287,7 @@ function problemas(w){const P={};const key=(l,t,i)=>l+'|'+t+'|'+i;
 function libres(f,t){const hoy=quienDia(f).map(x=>x.n),ayerN=quienDia(addDays(f,-1)).filter(x=>x.t==='n').map(x=>x.n),manD=quienDia(addDays(f,1)).filter(x=>x.t!=='n').map(x=>x.n);
   return personal().filter(p=>p.tipo==='franquero'&&!hoy.includes(p.nombre)&&!(t!=='n'&&ayerN.includes(p.nombre))&&!(t==='n'&&manD.includes(p.nombre))).map(p=>p.nombre)}
 function renderSemana(){
-  const w=semana,existe=!!SEM[w],P=problemas(w),hoy=hoyISO();renderPlan();
+  const w=semana,existe=!!SEM[w],P=problemas(w),hoy=hoyISO();renderPlan();{const hay=!!SEM[addDays(w,-7)];$('gen-row').hidden=!ADMIN||!hay||!existe;$('gen-nueva').hidden=!hay;if($('gen-row').dataset.w!==w){$('gen-row').dataset.w=w;$('gen-t').textContent='Arma esta semana a partir de la anterior: mañana y tarde rotan después del franco, la pareja de cada local tiene franco el mismo día y los francos se cubren con franqueros.'}}
   $('nueva-sem').hidden=!ADMIN||existe;
   if(ADMIN&&!existe){const sd=SEED&&SEED.seed[w];$('seed').hidden=!sd;$('copiar').hidden=!SEM[addDays(w,-7)];$('nueva-t').textContent='La semana del '+dm(w)+' todavía no está armada.'}
   $('legend').innerHTML=ADMIN?'<span><i class="sw" style="outline:2px solid var(--neg)"></i>dos turnos el mismo día</span><span><i class="sw" style="outline:2px dashed var(--warn)"></i>viene de noche / sigue de día</span><span><i class="sw" style="background:var(--warn-soft)"></i>a cubrir</span>':'';
@@ -321,6 +331,50 @@ $('plan-ok').onclick=()=>{const x=seedPend();
   x.p.forEach(s=>{const c=pinfo(s.nombre),{upd,...d}=s;if(!c)CFG.personal.push({...d});else{c.activo=true;if(upd){c.tipo=s.tipo;c.color=s.color}}});if(x.p.length||!cfgSaved)dirtyCfg=true;
   x.w.forEach(w=>{if(!orig[w])orig[w]=blankW(w);SEM[w]={...(SEM[w]||{}),id:w,asig:JSON.parse(JSON.stringify(SEED.seed[w]))};dirtyW.add(w)});
   if(x.w.length&&!x.w.includes(semana))semana=x.w[0];fillSelects();updateSave();setWeek(semana)};
+
+/* ======= GENERAR SEMANA desde la anterior ======= */
+function generarSemana(w){
+  const pw=addDays(w,-7),prev=SEM[pw];if(!prev)return null;
+  const P=(l,t,i)=>((prev.asig[l]||{})[t]||[])[i]||'';
+  const esFr=n=>(pinfo(n)||{}).tipo==='franquero';
+  const A=blankW(w).asig,notas=[];
+  LOCALES.forEach(L=>{const l=L.id;
+    // fijos habituales de día (mañana/tarde) y de noche en este local
+    const cD={},cN={};for(let i=0;i<7;i++){['m','t'].forEach(t=>{const n=P(l,t,i);if(n&&n!==CUBRIR&&!esFr(n))cD[n]=(cD[n]||0)+1});const n=P(l,'n',i);if(n&&n!==CUBRIR&&!esFr(n))cN[n]=(cN[n]||0)+1}
+    const dia=Object.keys(cD).filter(n=>cD[n]>=3).sort((a,b)=>cD[b]-cD[a]).slice(0,2);
+    const noc=Object.keys(cN).filter(n=>cN[n]>=3).sort((a,b)=>cN[b]-cN[a])[0];
+    // francos de la semana anterior y turno con el que terminó cada uno
+    const info=dia.map(n=>{let last=null,lastI=-1;const fr=[];
+      for(let i=0;i<7;i++){const t=P(l,'m',i)===n?'m':P(l,'t',i)===n?'t':null;if(t){last=t;lastI=i}else fr.push(i)}
+      let st=last||'m';if(fr.some(i=>i>lastI))st=st==='m'?'t':'m';return{n,fr,st}});
+    // el franco de la pareja, el mismo día
+    let frDia=null;
+    if(info.length){const comunes=info[0].fr.filter(i=>info.every(x=>x.fr.includes(i)));
+      frDia=comunes.length?comunes[0]:Math.min(...info.map(x=>x.fr.length?x.fr[0]:6));
+      if(info.length===2&&!comunes.length)notas.push(`${L.n}: ${nice(info[0].n)} y ${nice(info[1].n)} tenían franco en días distintos, ahora los dos lo tienen el ${DS[frDia]}`)}
+    if(info.length===2&&info[0].st===info[1].st)info[1].st=info[0].st==='m'?'t':'m';
+    for(let i=0;i<7;i++){
+      if(i===frDia){info.forEach(x=>x.st=x.st==='m'?'t':'m');continue}
+      info.forEach(x=>{if(!A[l][x.st][i])A[l][x.st][i]=x.n})}
+    if(noc){const fr=[];for(let i=0;i<7;i++)if(P(l,'n',i)!==noc)fr.push(i);const f=fr.length?fr[0]:-1;
+      for(let i=0;i<7;i++)if(i!==f)A[l].n[i]=noc}});
+  // cubrir con franqueros los turnos que quedaron libres
+  const frs=personal().filter(p=>p.tipo==='franquero').map(p=>p.nombre),cuenta={};frs.forEach(n=>cuenta[n]=0);
+  const enDia=(i,n)=>LOCALES.some(L=>T.some(t=>A[L.id][t][i]===n));
+  const nocheAyer=(i,n)=>i>0?LOCALES.some(L=>A[L.id].n[i-1]===n):LOCALES.some(L=>P(L.id,'n',6)===n);
+  const diaManana=(i,n)=>i<6&&LOCALES.some(L=>A[L.id].m[i+1]===n||A[L.id].t[i+1]===n);
+  let cub=0,falt=0;
+  for(let i=0;i<7;i++)['m','t','n'].forEach(t=>LOCALES.forEach(L=>{const l=L.id;if(A[l][t][i])return;
+    const ok=frs.filter(n=>!enDia(i,n)&&cuenta[n]<6&&(t==='n'?!diaManana(i,n):!nocheAyer(i,n)));
+    if(!ok.length){A[l][t][i]=CUBRIR;falt++;return}
+    const pts=n=>(P(l,t,i)===n?10:0)+(T.some(tt=>[0,1,2,3,4,5,6].some(k=>P(l,tt,k)===n))?3:0)-cuenta[n];
+    ok.sort((a,b)=>pts(b)-pts(a));A[l][t][i]=ok[0];cuenta[ok[0]]++;cub++}));
+  return{asig:A,notas,cub,falt}}
+function aplicarGenerada(w){const g=generarSemana(w);if(!g)return;
+  if(!orig[w])orig[w]=blankW(w);SEM[w]={...(SEM[w]||{}),id:w,asig:g.asig};dirtyW.add(w);updateSave();renderAll();
+  $('gen-row').hidden=false;$('gen-t').innerHTML=`<b>Semana generada.</b> ${g.cub} turnos cubiertos por franqueros${g.falt?`, <b>${g.falt} a cubrir</b>`:''}. Revisala y tocá Guardar, o Descartar cambios para volver atrás.`+(g.notas.length?'<br>'+g.notas.map(esc).join('<br>'):'')}
+$('gen-nueva').onclick=()=>aplicarGenerada(semana);
+$('gen-ok').onclick=()=>{const b=$('gen-ok');if(SEM[semana]&&b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='¿Reemplazar esta semana? Tocá de nuevo';return}b.dataset.ok='';b.textContent='Generar desde la semana anterior';aplicarGenerada(semana)};
 $('seed').onclick=()=>{if(!SEED)return;
   if(!CFG.personal.length)CFG.personal=SEED.personal.map(({upd,...p})=>p);if(!cfgSaved)dirtyCfg=true;
   Object.entries(SEED.seed).forEach(([w,a])=>{if(!SEM[w]){SEM[w]={id:w,asig:JSON.parse(JSON.stringify(a))};orig[w]=blankW(w);dirtyW.add(w)}});updateSave();renderAll()};
@@ -360,7 +414,7 @@ function renderAvisos(){const P=problemas(semana),vis=new Set(),L=Object.entries
   $('av-lista').querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{show('sem');const s=document.querySelector(`select.cs[data-k="${b.dataset.go}"]`);if(s){s.scrollIntoView({behavior:'smooth',block:'center'});s.focus()}})}
 
 /* ======= PERSONAL ======= */
-function renderPers(){const item=p=>`<div class="pitem"><input type="color" value="${p.color||'#ffffff'}" data-pc="${esc(p.nombre)}" aria-label="Color de ${esc(nice(p.nombre))}"><span class="n">${esc(nice(p.nombre))}</span><button class="mini" data-pt="${esc(p.nombre)}">${p.tipo==='franquero'?'Pasar a fijo':'Pasar a franquero'}</button><button class="mini" data-pb="${esc(p.nombre)}">Dar de baja</button></div>`;
+function renderPers(){const item=p=>`<div class="pitem"><input type="color" value="${p.color||'#ffffff'}" data-pc="${esc(p.nombre)}" aria-label="Color de ${esc(nice(p.nombre))}"><span class="n">${esc(nice(p.nombre))}</span><span class="acc"><button class="mini" data-pt="${esc(p.nombre)}">${p.tipo==='franquero'?'Pasar a fijo':'Pasar a franquero'}</button><button class="mini" data-pb="${esc(p.nombre)}">Dar de baja</button></span></div>`;
   $('p-fijos').innerHTML=personal().filter(p=>p.tipo!=='franquero').map(item).join('')||'<p class="empty">Sin fijos cargados.</p>';
   $('p-fr').innerHTML=personal().filter(p=>p.tipo==='franquero').map(item).join('')||'<p class="empty">Sin franqueros cargados.</p>';
   document.querySelectorAll('[data-pc]').forEach(i=>i.onchange=()=>{pinfo(i.dataset.pc).color=i.value;dirtyCfg=true;updateSave()});
