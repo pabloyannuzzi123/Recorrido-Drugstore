@@ -178,14 +178,19 @@ tr.sub td{color:var(--muted);font-size:13px}
   .item{grid-template-columns:auto 1fr auto}
   .item .acc{grid-column:2/-1;justify-self:start}
 }
+#btn-upd{margin-left:6px}
+#upd-banner{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:60;background:var(--ink,#13201C);color:#fff;padding:10px 14px;border-radius:12px;display:flex;gap:12px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:14px;max-width:calc(100% - 32px)}
+#upd-banner[hidden]{display:none}
+#upd-banner button{appearance:none;border:none;background:#fff;color:#13201C;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer}
 </style>
 </head>
 <body>
+<div id="upd-banner" hidden role="status"><span>Hay una versión nueva de la app.</span><button id="upd-go">Actualizar</button></div>
 <header class="top">
   <div class="wrap">
     <div class="brand">
       <h1>Caja diaria <span>Drugstore</span></h1>
-      <span class="status" id="status">Conectando…</span>
+      <span class="status" id="status">Conectando…</span><button class="mini" id="btn-upd" title="Cargar la última versión de la app">↻ Actualizar</button>
     </div>
     <div class="tabs" role="tablist" id="tabs">
       <button class="tab" data-v="dia" role="tab" aria-selected="true">Cargar día</button>
@@ -820,7 +825,7 @@ function ledger(){
     if((e.est==='pagado'||e.est==='debitado')&&e.fechaPago>=ini)E.push({f:e.fechaPago,a:e.origen||'banco',m:-e.monto,t:f.nombre+(e.cuota?' (cuota '+e.cuota+'/'+f.cuotas+')':''),o:4})})}
   Object.values(DB.cheques).forEach(c=>{if(c.cobrado){const f=c.cobradoEl||c.cobro;if(f>=ini)E.push({f,a:'banco',m:-c.monto,t:'Cheque N° '+(c.numero||'—')+' · '+(c.benef||''),o:5})}});
   Object.values(DB.provmovs).forEach(m=>{if(m.tipo==='pago'&&m.medio!=='Cheque'&&m.fecha>=ini)E.push({f:m.fecha,a:m.origen||'general',m:-m.monto,t:'Pago a '+provName(m.prov)+(m.detalle?' · '+m.detalle:''),o:4})});
-  Object.values(DB.adelantos).forEach(x=>{if(x.fecha>=ini)E.push({f:x.fecha,a:x.origen||'general',m:-x.monto,t:'Adelanto '+empN(x.emp),o:4})});
+  Object.values(DB.adelantos).forEach(x=>{if(x.fecha>=ini)E.push({f:x.fecha,a:x.origen||'general',m:-x.monto,t:(x.tipo==='sueldo'?'Sueldo '+mesT(x.mes)+' ':'Adelanto ')+empN(x.emp),o:4})});
   Object.values(DB.movcaja||{}).forEach(x=>{if(x.fecha<ini)return;const det=x.detalle?' · '+x.detalle:'';
     if(x.tipo==='pase')E.push({f:x.fecha,a:x.origen,m:-x.monto,t:'Pase a '+accN(x.destino)+det,o:3});
     E.push({f:x.fecha,a:x.destino,m:x.monto,t:(x.tipo==='pase'?'Ingreso desde '+accN(x.origen):'Ingreso externo · '+x.cat)+det,o:3})});
@@ -1220,32 +1225,41 @@ function renderEmpleados(){document.querySelectorAll('.dn-only').forEach(e=>e.hi
     :`<tr><td colspan="6" class="empty">${E.length?'No hay empleados en este filtro.':'Todavía no cargaste empleados. Agregalos uno por uno abajo, o pegá la lista entera en "Cargar varios de una vez".'}</td></tr>`;
   $('e-lista').querySelectorAll('[data-eed]').forEach(b=>b.onclick=()=>editEmp(b.dataset.eed));renderSueldos()}
 let emMes=hoyISO().slice(0,7);
-function adelMes(id,m){return Object.values(DB.adelantos).filter(x=>x.emp===id&&x.fecha.slice(0,7)===m)}
+function adelMes(id,m){return Object.values(DB.adelantos).filter(x=>x.tipo!=='sueldo'&&x.emp===id&&x.fecha.slice(0,7)===m)}
+function pagosSueldo(id,m){return Object.values(DB.adelantos).filter(x=>x.tipo==='sueldo'&&x.emp===id&&x.mes===m).sort((a,b)=>a.fecha.localeCompare(b.fecha))}
+function estadoPago(id,m,total){const P=pagosSueldo(id,m),pag=P.reduce((t,x)=>t+x.monto,0),falta=Math.max(0,Math.round(total-pag));
+  return{P,pag,falta,ok:P.length&&falta<=0}}
+function estadoHTML(id,m,total){const x=estadoPago(id,m,total);if(total<=0&&!x.P.length)return'';
+  if(x.ok)return `<div><span class="pill">✓ Pagado ${fCorta(x.P[x.P.length-1].fecha)}</span></div>`;
+  return (x.P.length?`<div class="note">pagado ${fmt(x.pag)}</div>`:'')+`<div><button class="mini" data-pagar="${esc(id)}" data-falta="${x.falta}">${x.P.length?'Pagar lo que falta':'Marcar pagado'}</button></div>`}
+function pagoForm(id,falta,m){const e=DB.empleados[id],o=e.local?'bol:'+e.local:'general';
+  return `<tr class="sub" data-pgf="${esc(id)}"><td colspan="8"><div class="row"><b>Pago del sueldo de ${esc(mesT(m))} a ${esc(e.nombre)}</b><input class="f money" data-pm value="${fmtIn(falta)}" inputmode="decimal" style="max-width:140px" aria-label="Monto"><input type="date" class="f" data-pf value="${hoyISO()}" style="max-width:160px" aria-label="Fecha"><label class="note">Sale de <select class="f" data-po style="max-width:200px">${ACC_OPTS(o)}</select></label><input class="f" data-pn placeholder="Nota (opcional)" style="max-width:180px"><button class="btn sm primary" data-pok>Guardar pago</button><button class="btn sm" data-px>Cancelar</button><span class="note" data-pmsg></span></div></td></tr>`}
 function frMes(id,m){let dias=0,hs=0,cob=0;Object.values(DB.dias).forEach(d0=>{if(d0.fecha.slice(0,7)!==m)return;const d=normDia(d0),vh=d.vh||VH;let any=false;
   Object.entries(d.fq).forEach(([L,o])=>Object.entries(o||{}).forEach(([t,e])=>{if(e===id){const h=((d.fh||{})[L]||{})[t]||0;if(h){hs+=h;cob+=h*vh;any=true}}}));if(any)dias++});return{dias,hs,cob}}
 function frRes(e,m){const c=frMes(e.id,m),hm=horMes(e,m),ad=adelMes(e.id,m).reduce((t,y)=>t+y.monto,0);
-  const dias=hm?hm.dH:c.dias,hs=hm?hm.hH:c.hs,corr=hm?hm.hH*VH:c.cob;return{hm,dias,hs,corr,cob:c.cob,ad,falta:corr-c.cob-ad}}
+  const dias=hm?hm.dH:c.dias,hs=hm?hm.hH:c.hs,corr=hm?hm.hH*VH:c.cob;return{hm,dias,hs,corr,cob:c.cob,ad,falta:corr-c.cob-ad,base:corr-c.cob-ad}}
 function adelForm(id){const e=DB.empleados[id],o=e.local?'bol:'+e.local:'general';
   return `<tr class="sub" data-adf="${esc(id)}"><td colspan="7"><div class="row"><b>Adelanto a ${esc(e.nombre)}</b><input class="f money" data-am placeholder="Monto" inputmode="decimal" style="max-width:140px"><input type="date" class="f" data-af value="${hoyISO()}" style="max-width:160px"><select class="f" data-ao style="max-width:200px">${ACC_OPTS(o)}</select><input class="f" data-an placeholder="Nota (opcional)" style="max-width:200px"><button class="btn sm" data-aok>Guardar adelanto</button><button class="mini" data-ax>Cancelar</button><span class="note" data-amsg></span></div></td></tr>`}
 function renderSueldos(){
   const m=emMes,hoy=hoyISO(),E=Object.values(DB.empleados||{}).filter(e=>!e.baja||e.baja>=m+'-01');
   $('em-mes').textContent=mesT(m);
   const fx=E.filter(e=>e.tipo!=='Franquero').sort((a,b)=>(a.local||'zz').localeCompare(b.local||'zz')||a.nombre.localeCompare(b.nombre));
-  let tS=0,tP=0,tA=0;
-  $('ef-lista').innerHTML=fx.length?fx.map(e=>{const s=empSueldoMes(e,m),ad=adelMes(e.id,m),a=ad.reduce((t,x)=>t+x.monto,0);tS+=s.s;tP+=s.p;tA+=a;const w=waNum(e.tel),hm=horMes(e,m);
+  let tS=0,tP=0,tA=0,tPag=0,nOk=0;
+  $('ef-lista').innerHTML=fx.length?fx.map(e=>{const s=empSueldoMes(e,m),ad=adelMes(e.id,m),a=ad.reduce((t,x)=>t+x.monto,0);tS+=s.s;tP+=s.p;tA+=a;{const ep=estadoPago(e.id,m,s.s+s.p-a);tPag+=ep.pag;if(ep.ok)nOk++}const w=waNum(e.tel),hm=horMes(e,m);
     return `<tr><td><b>${esc(e.nombre)} ${esc(e.apellido)}</b><div class="note">${e.local?esc(locN(e.local)):'Rota'}${e.manual?' · sueldo especial':''}</div></td><td>${esc((JORNADAS.find(j=>j.v===e.jornada)||{n:'—'}).n)}</td>
       <td class="num">${hm?hm.dH+' días<div class="note">'+String(hm.hH).replace('.',',')+' hs · '+hm.dias+' en el mes</div>':'<span class="note">'+(horNameOf(e)?'sin horario':'no está en Horarios')+'</span>'}</td>
-      <td class="num">${fmt(s.s)}</td><td class="num">${s.sin?`<span class="note" style="text-decoration:line-through">${fmt(s.pBase)}</span><div class="note neg">no cumplió</div><button class="mini" data-pres="${esc(e.id)}">Devolver</button>`:`${fmt(s.p)}<div><button class="mini" data-pres="${esc(e.id)}">Sacar</button></div>`}</td><td class="num">${a?fmt(a)+(ad.length>1?'<div class="note">'+ad.length+' adelantos</div>':''):'—'}</td><td class="num"><b>${fmt(s.s+s.p-a)}</b></td>
+      <td class="num">${fmt(s.s)}</td><td class="num">${s.sin?`<span class="note" style="text-decoration:line-through">${fmt(s.pBase)}</span><div class="note neg">no cumplió</div><button class="mini" data-pres="${esc(e.id)}">Devolver</button>`:`${fmt(s.p)}<div><button class="mini" data-pres="${esc(e.id)}">Sacar</button></div>`}</td><td class="num">${a?fmt(a)+(ad.length>1?'<div class="note">'+ad.length+' adelantos</div>':''):'—'}</td><td class="num"><b>${fmt(s.s+s.p-a)}</b>${estadoHTML(e.id,m,s.s+s.p-a)}</td>
       <td class="num"><button class="mini" data-adel="${esc(e.id)}">+ Adelanto</button>${w?` <a class="mini" href="https://wa.me/${w}?text=${encodeURIComponent(msgSueldo(e,m))}" target="_blank" rel="noopener">Enviar</a>`:''}</td></tr>`+
+      pagosSueldo(e.id,m).map(x=>`<tr class="sub"><td colspan="6">↳ Pago de sueldo ${fCorta(x.fecha)} · sale de ${esc(accN(x.origen))} · ${fmt(x.monto)}</td><td colspan="2" class="num"><button class="mini" data-adel-del="${esc(x.id)}">Deshacer</button></td></tr>`).join('')+
       (ad.length?ad.map(x=>`<tr class="sub"><td colspan="5">↳ Adelanto ${fCorta(x.fecha)} · sale de ${esc(accN(x.origen))}${x.nota?' · '+esc(x.nota):''}</td><td class="num">${fmt(x.monto)}</td><td colspan="2" class="num"><button class="mini" data-adel-del="${esc(x.id)}">Borrar</button></td></tr>`).join(''):'')}).join('')
     :'<tr><td colspan="7" class="empty">No hay empleados fijos cargados. Agregalos abajo con tipo "Fijo".</td></tr>';
-  $('ef-tot').innerHTML=fx.length?`<tr><td>Total</td><td></td><td></td><td class="num">${fmt(tS)}</td><td class="num">${fmt(tP)}</td><td class="num">${fmt(tA)}</td><td class="num">${fmt(tS+tP-tA)}</td><td></td></tr>`:'';
+  $('ef-tot').innerHTML=fx.length?`<tr><td>Total</td><td></td><td></td><td class="num">${fmt(tS)}</td><td class="num">${fmt(tP)}</td><td class="num">${fmt(tA)}</td><td class="num">${fmt(tS+tP-tA)}<div class="note">pagado ${fmt(tPag)} · ${nOk} de ${fx.length}</div></td><td></td></tr>`:'';
   const fr=E.filter(e=>e.tipo==='Franquero').sort((a,b)=>a.nombre.localeCompare(b.nombre));
   $('efr-val').textContent='turno de 4 hs '+fmt(4*VH)+' · 6,5 hs '+fmt(6.5*VH)+' · 7 hs '+fmt(7*VH)+' · 8 hs '+fmt(8*VH);
   $('efr-lista').innerHTML=fr.length?fr.map(e=>{const x=frRes(e,m),a=x.ad,w=waNum(e.tel);
     return `<tr><td><b>${esc(e.nombre)} ${esc(e.apellido)}</b>${x.hm?'':'<div class="note">'+(horNameOf(e)?'sin horario este mes':'no está en Horarios')+'</div>'}</td><td class="num">${x.dias||'—'}</td><td class="num">${x.hs?String(x.hs).replace('.',','):'—'}</td>
-      <td class="num">${fmt(x.corr)}</td><td class="num">${fmt(x.cob)}</td><td class="num">${a?fmt(a):'—'}</td><td class="num${x.falta<0?' neg':''}"><b>${fmt(x.falta)}</b></td>
-      <td class="num"><button class="mini" data-adel="${esc(e.id)}">+ Adelanto</button>${w?` <a class="mini" href="https://wa.me/${w}?text=${encodeURIComponent(msgFranquero(e,m,x))}" target="_blank" rel="noopener">Enviar</a>`:''}</td></tr>`}).join('')
+      <td class="num">${fmt(x.corr)}</td><td class="num">${fmt(x.cob)}</td><td class="num">${a?fmt(a):'—'}</td><td class="num${x.falta<0?' neg':''}"><b>${fmt(x.falta)}</b>${estadoHTML(e.id,m,x.falta)}</td>
+      <td class="num"><button class="mini" data-adel="${esc(e.id)}">+ Adelanto</button>${w?` <a class="mini" href="https://wa.me/${w}?text=${encodeURIComponent(msgFranquero(e,m,x))}" target="_blank" rel="noopener">Enviar</a>`:''}</td></tr>`+pagosSueldo(e.id,m).map(y=>`<tr class="sub"><td colspan="6">↳ Pago ${fCorta(y.fecha)} · sale de ${esc(accN(y.origen))} · ${fmt(y.monto)}</td><td colspan="2" class="num"><button class="mini" data-adel-del="${esc(y.id)}">Deshacer</button></td></tr>`).join('')}).join('')
     :'<tr><td colspan="8" class="empty">No hay franqueros cargados. Agregalos abajo con tipo "Franquero".</td></tr>';
   document.querySelectorAll('#view-emp [data-adel]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-adf]').forEach(x=>x.remove());const tr=b.closest('tr');tr.insertAdjacentHTML('afterend',adelForm(b.dataset.adel));
     const f=tr.nextElementSibling;f.querySelector('[data-am]').focus();f.querySelector('[data-ax]').onclick=()=>f.remove();
@@ -1254,6 +1268,12 @@ function renderSueldos(){
       const o=f.querySelector('[data-ao]').value,id=b.dataset.adel;
       const x={id:uid('a'),emp:id,empN:empN(id),fecha:f.querySelector('[data-af]').value||hoyISO(),monto,origen:o,origenN:accN(o),nota:f.querySelector('[data-an]').value.trim()};
       ev.target.disabled=true;try{await put('adelantos',x.id,x);DB.adelantos[x.id]=x;renderSueldos()}catch(err){ev.target.disabled=false;f.querySelector('[data-amsg]').textContent='No se pudo guardar.'}}});
+  document.querySelectorAll('#view-emp [data-pagar]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-pgf],[data-adf]').forEach(x=>x.remove());const tr=b.closest('tr'),id=b.dataset.pagar;
+    tr.insertAdjacentHTML('afterend',pagoForm(id,+b.dataset.falta,m));const f=tr.nextElementSibling,mi=f.querySelector('[data-pm]');mi.focus();mi.select();
+    mi.addEventListener('blur',()=>{mi.value=fmtIn(parse(mi.value))});f.querySelector('[data-px]').onclick=()=>f.remove();
+    f.querySelector('[data-pok]').onclick=async ev=>{const monto=parse(mi.value);if(!monto){f.querySelector('[data-pmsg]').textContent='Poné el monto.';return}
+      const o=f.querySelector('[data-po]').value,x={id:uid('s'),tipo:'sueldo',mes:m,emp:id,empN:empN(id),fecha:f.querySelector('[data-pf]').value||hoyISO(),monto,origen:o,origenN:accN(o),nota:('Sueldo '+mesT(m)+' '+f.querySelector('[data-pn]').value).trim()};
+      ev.target.disabled=true;try{await put('adelantos',x.id,x);DB.adelantos[x.id]=x;renderSueldos()}catch(err){ev.target.disabled=false;f.querySelector('[data-pmsg]').textContent='No se pudo guardar.'}}});
   document.querySelectorAll('[data-pres]').forEach(b=>b.onclick=async()=>{const e=DB.empleados[b.dataset.pres];if(!e)return;const L=new Set(e.sinPres||[]);
     if(L.has(m))L.delete(m);else L.add(m);const nuevo={...e,sinPres:[...L].sort()};b.disabled=true;
     try{await put('empleados',e.id,nuevo);DB.empleados[e.id]=nuevo;renderSueldos()}catch(err){b.disabled=false;b.textContent='No se pudo guardar'}});
@@ -1276,7 +1296,7 @@ function printSueldos(m){
       <td class="c">${hm?hm.dH+' d<div class="n">'+hsT(hm.hH)+' hs</div>':'—'}</td><td class="r">${fmt(s.s)}</td>
       <td class="r">${s.sin?'<s>'+fmt(s.pBase)+'</s><div class="n">no cumplió</div>':fmt(s.p)}</td>
       <td class="r">${a?fmt(a)+ad.map(x=>`<div class="n">${fCorta(x.fecha)}: ${fmt(x.monto)}</div>`).join(''):'—'}</td>
-      <td class="r"><b>${fmt(c)}</b></td><td class="f"></td></tr>`}).join('');
+      <td class="r"><b>${fmt(c)}</b>${(()=>{const ep=estadoPago(e.id,m,c);return ep.ok?`<div class="n">pagado ${fCorta(ep.P[ep.P.length-1].fecha)}</div>`:ep.pag?`<div class="n">pagado ${fmt(ep.pag)}, falta ${fmt(ep.falta)}</div>`:''})()}</td><td class="f"></td></tr>`}).join('');
   let F={corr:0,cob:0,ad:0,falta:0,pagar:0};
   const rfr=fr.map(e=>{const x=frRes(e,m);if(!x.dias&&!x.cob&&!x.ad)return'';F.corr+=x.corr;F.cob+=x.cob;F.ad+=x.ad;F.falta+=x.falta;F.pagar+=Math.max(0,x.falta);
     return `<tr><td><b>${esc(e.nombre)} ${esc(e.apellido||'')}</b></td><td class="c">${x.dias||'—'}${x.hs?'<div class="n">'+hsT(x.hs)+' hs</div>':''}</td><td class="r">${fmt(x.corr)}</td><td class="r">${fmt(x.cob)}</td><td class="r">${x.ad?fmt(x.ad):'—'}</td><td class="r"><b>${fmt(x.falta)}</b></td><td class="f"></td></tr>`}).join('');
@@ -1561,6 +1581,15 @@ $('e-loc').innerHTML=opts([{v:'',n:'Varios / rota'}].concat(LOCALES.map(l=>({v:l
 openDay(hoyISO());
 if(API&&CLAVE&&!QUIEN){verSetup(true);$('s-clave').value=CLAVE;$('s-msg').textContent='Falta tu nombre: queda registrado en cada cambio.';$('status').textContent='Falta tu nombre'}
 else if(API&&CLAVE)conectar().then(r=>{if(r==='clave'){ls.del('caja_clave');verSetup(true);$('s-msg').textContent='La clave cambió. Escribí la clave nueva.'}});else{verSetup(true);$('status').textContent='Falta conectar con la planilla'}
+
+/* ======= versión de la app: botón Actualizar y aviso de versión nueva ======= */
+const APP_VER='2026-11-07b';
+function actualizarApp(){const u=location.pathname+'?v='+Date.now()+location.hash;location.replace(u)}
+async function chequearVersion(){try{const r=await fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'});if(!r.ok)return;const t=await r.text();const m=t.match(/const APP_VER='([^']+)'/);
+  if(m&&m[1]!==APP_VER){const b=document.getElementById('upd-banner');if(b)b.hidden=false}}catch(e){}}
+document.getElementById('btn-upd').onclick=actualizarApp;document.getElementById('upd-go').onclick=actualizarApp;
+setTimeout(chequearVersion,3000);setInterval(chequearVersion,10*60*1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)chequearVersion()});
 </script>
 </body>
 </html>
