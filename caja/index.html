@@ -83,6 +83,9 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 /* movimientos */
 .movs{display:flex;flex-direction:column;gap:8px}
 .mov{display:grid;grid-template-columns:100px 1.2fr 1.2fr 1.4fr 1fr 32px;gap:6px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px}
+.partes .parte{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 32px;gap:6px;align-items:center;max-width:520px}
+#pp-multi{margin:8px 0;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+#pp-partes{display:flex;flex-direction:column;gap:6px;width:100%}
 .multi{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:10px}
 .multi .mh{display:grid;grid-template-columns:100px 1fr 1.4fr 1.6fr 32px;gap:6px;align-items:center}
 .multi .partes{display:flex;flex-direction:column;gap:6px;margin-left:106px}
@@ -255,7 +258,6 @@ tr.sub td{color:var(--muted);font-size:13px}
     <div class="movs" id="movs"></div>
     <div class="row">
       <button class="btn" id="add-pago">+ Pago</button>
-      <button class="btn" id="add-multi">+ Pago de varios cajones</button>
       <button class="btn" id="add-pase">+ Pase entre cajas</button>
     </div>
     <p class="note">Los pagos a proveedores con cuenta (los que tienen deuda) se cargan en la pestaña Proveedores, así se descuentan de lo que se les debe. Pago: sale plata de una caja (depósito, gastos, sueldo del bolsín…). Pase: se mueve plata de una caja a otra (cajón → caja general, depósito al banco…).</p>
@@ -445,6 +447,10 @@ tr.sub td{color:var(--muted);font-size:13px}
         <label class="pp-ch">Banco<input class="f" id="pp-chbanco"></label>
         <label class="pp-ch">Fecha de cobro<input type="date" class="f" id="pp-chcob"></label>
         <label class="w2">Detalle<input class="f" id="pp-det" placeholder="Opcional"></label>
+      </div>
+      <div class="pp-ef" id="pp-multi">
+        <div class="partes" id="pp-partes"></div>
+        <button type="button" class="btn sm" id="pp-addp">+ Sacar también de otro cajón</button>
       </div>
       <p class="aviso" id="pp-aviso" hidden></p>
       <div class="row"><button class="btn primary" id="pp-ok">Registrar pago</button><button class="btn" id="pp-x">Cancelar</button><span class="note" id="pp-msg"></span></div>
@@ -987,7 +993,7 @@ $('lock-ok').onclick=async()=>{const c=$('lock-clave').value.trim();if(!c)return
   catch(e){$('lock-msg').textContent='Clave incorrecta.'}};
 $('lock-clave').addEventListener('keydown',e=>{if(e.key==='Enter')$('lock-ok').click()});
 $('add-pago').onclick=()=>{state.movs.push({id:uid('m'),clase:'pago',origen:'general',destino:'',cat:'Proveedor',local:'',detalle:'',monto:0});buildMovs();markDirty();const d=$('movs').querySelectorAll('[data-k=detalle]');d[d.length-1]?.focus()};
-$('add-multi').onclick=()=>{const g=uid('g');['loc:'+LOCALES[0].id,'loc:'+LOCALES[1].id].forEach(o=>state.movs.push({id:uid('m'),clase:'pago',grp:g,gl:'__cada',origen:o,destino:'',cat:'Proveedor',local:accLocal(o),detalle:'',monto:0}));
+if($('add-multi'))$('add-multi').onclick=()=>{const g=uid('g');['loc:'+LOCALES[0].id,'loc:'+LOCALES[1].id].forEach(o=>state.movs.push({id:uid('m'),clase:'pago',grp:g,gl:'__cada',origen:o,destino:'',cat:'Proveedor',local:accLocal(o),detalle:'',monto:0}));
   buildMovs();markDirty();const d=$('movs').querySelectorAll('.multi [data-g=detalle]');d[d.length-1]?.focus()};
 $('add-pase').onclick=()=>{state.movs.push({id:uid('m'),clase:'pase',origen:'loc:'+LOCALES[0].id,destino:'general',cat:'',local:'',detalle:'',monto:0});buildMovs();markDirty()};
 $('nota').addEventListener('input',readDay);$('guardar').onclick=guardar;
@@ -1355,35 +1361,50 @@ function renderProvDet(){const p=DB.proveedores[pSel];$('p-det').hidden=!p;if(!p
   const s=saldoProv(p.id);$('p-det-t').textContent=p.nombre;$('p-det-s').textContent=(s>0?'se le debe '+fmt(s):s<0?'saldo a favor '+fmt(-s):'al día')+' · cobra '+diasT(p);
   const M=Object.values(DB.provmovs).filter(m=>m.prov===p.id).sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.tipo==='deuda'?-1:1));let run=0;
   const rows=M.map(m=>{run+=m.tipo==='deuda'?m.monto:-m.monto;const ch=m.cheque?DB.cheques[m.cheque]:null;
-    const conc=m.tipo==='deuda'?(m.detalle||'Deuda'):'Pago · '+m.medio+(m.medio==='Cheque'?' N° '+(m.chNum||'—')+' cobro '+fCorta(m.chCobro)+(ch?(ch.cobrado?' (cobrado)':' (pendiente)'):''):' · '+accN(m.origen))+(m.detalle?' · '+m.detalle:'');
+    const conc=m.tipo==='deuda'?(m.detalle||'Deuda'):'Pago · '+m.medio+(m.medio==='Cheque'?' N° '+(m.chNum||'—')+' cobro '+fCorta(m.chCobro)+(ch?(ch.cobrado?' (cobrado)':' (pendiente)'):''):' · '+accN(m.origen)+(m.grp?' (parte de un pago de '+fmt(m.grpTot||0)+')':''))+(m.detalle?' · '+m.detalle:'');
     return `<tr><td>${fCorta(m.fecha)}</td><td>${esc(conc)}</td><td class="num">${m.tipo==='deuda'?fmt(m.monto):''}</td><td class="num">${m.tipo==='pago'?fmt(m.monto):''}</td><td class="num${run>0?' neg':''}">${fmt(run)}</td><td class="num"><button class="mini" data-pmdel="${esc(m.id)}">Borrar</button></td></tr>`});
   $('p-movs').innerHTML=rows.length?rows.reverse().join(''):'<tr><td colspan="6" class="empty">Sin movimientos. Cargá lo que se le debe con "+ Deuda / factura".</td></tr>';
   $('p-movs').querySelectorAll('[data-pmdel]').forEach(b=>b.onclick=async()=>{if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='¿Borrar? Tocá de nuevo';return}
-    const m=DB.provmovs[b.dataset.pmdel];try{await del('provmovs',m.id);delete DB.provmovs[m.id];
+    const m=DB.provmovs[b.dataset.pmdel];try{const G=m.grp?Object.values(DB.provmovs).filter(y=>y.grp===m.grp&&y.id!==m.id):[];for(const y of G){await del('provmovs',y.id);delete DB.provmovs[y.id]}
+      await del('provmovs',m.id);delete DB.provmovs[m.id];
       if(m.cheque&&DB.cheques[m.cheque]&&!DB.cheques[m.cheque].cobrado){await del('cheques',m.cheque);delete DB.cheques[m.cheque]}renderProveedores()}catch(e){}})}
+/* pago a proveedor desde varios cajones */
+let ppP=[];
+function ppRender(){const box=$('pp-partes'),multi=ppP.length>1;$('pp-origen').closest('label').hidden=multi||$('pp-medio').value!=='Efectivo';$('pp-monto').readOnly=multi;
+  $('pp-addp').textContent=multi?'+ Otro cajón':'+ Sacar también de otro cajón';
+  box.innerHTML=multi?ppP.map((x,k)=>`<div class="parte"><select class="f" data-ppo="${k}" aria-label="Sale de">${ACC_OPTS(x.o)}</select><input class="f money" data-ppm="${k}" inputmode="decimal" placeholder="Monto" value="${fmtIn(x.m)}" aria-label="Monto"><button class="del" data-ppd="${k}" aria-label="Quitar">×</button></div>`).join('')+`<span class="note">El monto total es la suma de lo que sale de cada cajón.</span>`:'';
+  const sum=()=>{$('pp-monto').value=fmtIn(ppP.reduce((a,x)=>a+x.m,0));ppAviso()};
+  box.querySelectorAll('[data-ppo]').forEach(s=>s.onchange=()=>{ppP[+s.dataset.ppo].o=s.value});
+  box.querySelectorAll('[data-ppm]').forEach(i=>{i.oninput=()=>{ppP[+i.dataset.ppm].m=parse(i.value);sum()};i.onblur=()=>{i.value=fmtIn(parse(i.value))}});
+  box.querySelectorAll('[data-ppd]').forEach(b=>b.onclick=()=>{ppP.splice(+b.dataset.ppd,1);if(ppP.length===1){$('pp-origen').value=ppP[0].o;$('pp-monto').value=fmtIn(ppP[0].m)}else sum();if(ppP.length<2)ppP=[];ppRender()});
+  if(multi)sum()}
+$('pp-addp').onclick=()=>{if(!ppP.length)ppP=[{o:$('pp-origen').value,m:parse($('pp-monto').value)}];
+  const us=ppP.map(x=>x.o),sig=LOCALES.map(l=>'loc:'+l.id).find(a=>!us.includes(a))||'general';ppP.push({o:sig,m:0});ppRender();const q=$('pp-partes').querySelectorAll('[data-ppm]');q[q.length-1]?.focus()};
 function ppVis(){const md=$('pp-medio').value;document.querySelectorAll('.pp-ef').forEach(e=>e.hidden=md!=='Efectivo');document.querySelectorAll('.pp-ch').forEach(e=>e.hidden=md!=='Cheque');
-  if(md==='Transferencia')$('pp-origen').value='banco';ppAviso()}
+  if(md==='Transferencia')$('pp-origen').value='banco';if(md!=='Efectivo'&&ppP.length){$('pp-monto').value=fmtIn(ppP.reduce((a,x)=>a+x.m,0));ppP=[]}ppRender();ppAviso()}
 function ppAviso(){const a=$('pp-aviso');const p=DB.proveedores[pSel],s=p?saldoProv(p.id):0,m=parse($('pp-monto').value),md=$('pp-medio').value,f=$('pp-chcob').value;const msgs=[];let mal=false;
   if(m&&s>0&&m<s)msgs.push('Pago parcial: queda debiendo '+fmt(s-m)+'.');if(m&&m>s)msgs.push('El pago supera la deuda cargada en '+fmt(m-Math.max(0,s))+' (queda saldo a favor).');
   if(md==='Cheque'&&f&&m){const ya=totalDia(f,null),tot=ya+m;if(LIM&&tot>LIM){mal=true;msgs.push(`El ${fCorta(f)} ya hay ${fmt(ya)} en cheques: con este quedan ${fmt(tot)} y se pasa del límite de ${fmt(LIM)}.`)}else if(ya)msgs.push(`El ${fCorta(f)} ya hay ${fmt(ya)} en cheques; con este quedan ${fmt(tot)}.`)}
   a.hidden=!msgs.length;a.className='aviso'+(mal?' mal':'');a.textContent=msgs.join(' ')}
 $('p-add-deuda').onclick=()=>{$('p-form-deuda').hidden=false;$('p-form-pago').hidden=true;$('pd-fecha').value=hoyISO();$('pd-monto').value='';$('pd-det').value='';$('pd-msg').textContent='';$('pd-monto').focus()};
 $('p-add-pago').onclick=()=>{const p=DB.proveedores[pSel];$('p-form-pago').hidden=false;$('p-form-deuda').hidden=true;$('pp-fecha').value=hoyISO();const s=saldoProv(pSel);$('pp-monto').value=s>0?fmtIn(s):'';
-  $('pp-medio').value=p.medio||'Efectivo';$('pp-origen').value='general';['pp-chnum','pp-chbanco','pp-det'].forEach(i=>$(i).value='');$('pp-chcob').value=hoyISO();$('pp-msg').textContent='';ppVis();$('pp-monto').focus()};
+  $('pp-medio').value=p.medio||'Efectivo';$('pp-origen').value='general';['pp-chnum','pp-chbanco','pp-det'].forEach(i=>$(i).value='');$('pp-chcob').value=hoyISO();$('pp-msg').textContent='';ppP=[];ppVis();$('pp-monto').focus()};
 $('pd-x').onclick=()=>$('p-form-deuda').hidden=true;$('pp-x').onclick=()=>$('p-form-pago').hidden=true;
 $('pp-medio').onchange=ppVis;['pp-monto','pp-chcob'].forEach(i=>$(i).addEventListener('input',ppAviso));
 ['pd-monto','pp-monto'].forEach(i=>$(i).addEventListener('blur',e=>{e.target.value=fmtIn(parse(e.target.value))}));
 $('pd-ok').onclick=async()=>{const m=parse($('pd-monto').value);if(!m){$('pd-msg').textContent='Poné el monto.';return}if(!online){$('pd-msg').textContent='Sin conexión con la planilla.';return}
   const x={id:uid('pm'),prov:pSel,provN:provName(pSel),tipo:'deuda',fecha:$('pd-fecha').value||hoyISO(),monto:m,detalle:$('pd-det').value.trim()};
   $('pd-ok').disabled=true;try{await put('provmovs',x.id,x);DB.provmovs[x.id]=x;$('p-form-deuda').hidden=true;renderProveedores()}catch(e){$('pd-msg').textContent='No se pudo guardar.'}$('pd-ok').disabled=false};
-$('pp-ok').onclick=async()=>{const m=parse($('pp-monto').value),md=$('pp-medio').value;if(!m){$('pp-msg').textContent='Poné el monto.';return}
+$('pp-ok').onclick=async()=>{const m=parse($('pp-monto').value),md=$('pp-medio').value;if(!m){$('pp-msg').textContent=ppP.length>1?'Poné cuánto sale de cada cajón.':'Poné el monto.';return}
   if(md==='Cheque'&&!$('pp-chcob').value){$('pp-msg').textContent='Poné la fecha de cobro del cheque.';return}if(!online){$('pp-msg').textContent='Sin conexión con la planilla.';return}
   const o=md==='Efectivo'?$('pp-origen').value:'banco';
   const x={id:uid('pm'),prov:pSel,provN:provName(pSel),tipo:'pago',fecha:$('pp-fecha').value||hoyISO(),monto:m,medio:md,origen:md==='Cheque'?'':o,origenN:md==='Cheque'?'':accN(o),detalle:$('pp-det').value.trim()};
   $('pp-ok').disabled=true;$('pp-msg').textContent='Guardando…';
   try{if(md==='Cheque'){const c={id:uid('c'),numero:$('pp-chnum').value.trim(),banco:$('pp-chbanco').value.trim(),benef:provName(pSel),monto:m,emision:x.fecha,cobro:$('pp-chcob').value,nota:'Pago a proveedor',cobrado:false,cobradoEl:'',prov:pSel,provmov:x.id};
       x.cheque=c.id;x.chNum=c.numero;x.chCobro=c.cobro;await put('cheques',c.id,c);DB.cheques[c.id]=c}
-    await put('provmovs',x.id,x);DB.provmovs[x.id]=x;$('p-form-pago').hidden=true;renderProveedores()}
+    if(md==='Efectivo'&&ppP.length>1){const P=ppP.filter(y=>y.m>0);const g=uid('g');
+      for(const y of P){const z={...x,id:uid('pm'),monto:y.m,origen:y.o,origenN:accN(y.o),grp:g,grpTot:m};await put('provmovs',z.id,z);DB.provmovs[z.id]=z}ppP=[]}
+    else{await put('provmovs',x.id,x);DB.provmovs[x.id]=x}$('p-form-pago').hidden=true;renderProveedores()}
   catch(e){$('pp-msg').textContent='No se pudo guardar. Probá de nuevo.'}$('pp-ok').disabled=false};
 function pfLimpiar(){pEdit=null;['pf-nom','pf-nota'].forEach(i=>$(i).value='');$('pf-medio').value='Efectivo';document.querySelectorAll('[data-pfd]').forEach(c=>c.checked=false);
   $('pf-t').textContent='Agregar proveedor';$('pf-ok').textContent='Agregar proveedor';$('pf-x').hidden=true}
