@@ -115,14 +115,19 @@ input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);ou
 .loginbox{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 @media (max-width:700px){.turno{grid-template-columns:90px 1fr}.turno .hh{grid-column:2}}
 @media print{header.top,.savebar,.noprint{display:none!important}body{background:#fff}}
+#btn-upd{margin-left:6px}
+#upd-banner{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:60;background:var(--ink,#13201C);color:#fff;padding:10px 14px;border-radius:12px;display:flex;gap:12px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:14px;max-width:calc(100% - 32px)}
+#upd-banner[hidden]{display:none}
+#upd-banner button{appearance:none;border:none;background:#fff;color:#13201C;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer}
 </style>
 </head>
 <body>
+<div id="upd-banner" hidden role="status"><span>Hay una versión nueva de la app.</span><button id="upd-go">Actualizar</button></div>
 <header class="top">
   <div class="wrap">
     <div class="brand">
       <h1>Horarios <span>Drugstore</span></h1>
-      <span class="row"><span class="pill mute" id="modo">Solo lectura</span><button class="mini" id="btn-admin">Soy administrador</button></span>
+      <span class="row"><button class="mini" id="btn-upd" title="Cargar la última versión de la app">↻ Actualizar</button><span class="pill mute" id="modo">Solo lectura</span><button class="mini" id="btn-admin">Soy administrador</button></span>
     </div>
     <div class="loginbox" id="login" hidden>
       <input class="f" id="l-quien" placeholder="Tu nombre" style="max-width:160px">
@@ -469,6 +474,15 @@ async function load(){$('status').textContent='Cargando…';$('status').classNam
   catch(e){$('status').textContent='No se pudo cargar el horario. Revisá internet.';$('status').className='status bad'}}
 setModo();setWeek(semana);load();
 if(!ADMIN&&ls.get('hor_yo'))show('yo');
+
+/* ======= versión de la app: botón Actualizar y aviso de versión nueva ======= */
+const APP_VER='2026-11-07b';
+function actualizarApp(){const u=location.pathname+'?v='+Date.now()+location.hash;location.replace(u)}
+async function chequearVersion(){try{const r=await fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'});if(!r.ok)return;const t=await r.text();const m=t.match(/const APP_VER='([^']+)'/);
+  if(m&&m[1]!==APP_VER){const b=document.getElementById('upd-banner');if(b)b.hidden=false}}catch(e){}}
+document.getElementById('btn-upd').onclick=actualizarApp;document.getElementById('upd-go').onclick=actualizarApp;
+setTimeout(chequearVersion,3000);setInterval(chequearVersion,10*60*1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)chequearVersion()});
 </script>
 </body>
 </html>
