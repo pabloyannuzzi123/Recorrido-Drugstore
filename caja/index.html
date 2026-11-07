@@ -83,6 +83,13 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 /* movimientos */
 .movs{display:flex;flex-direction:column;gap:8px}
 .mov{display:grid;grid-template-columns:100px 1.2fr 1.2fr 1.4fr 1fr 32px;gap:6px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px}
+.multi{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:10px}
+.multi .mh{display:grid;grid-template-columns:100px 1fr 1.4fr 1.6fr 32px;gap:6px;align-items:center}
+.multi .partes{display:flex;flex-direction:column;gap:6px;margin-left:106px}
+.multi .parte{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 32px;gap:6px;align-items:center;max-width:520px}
+.multi .mf{margin-left:106px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.multi .tag{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--warn)}
+@media (max-width:700px){.multi .mh{grid-template-columns:1fr 1fr}.multi .mh .tag{grid-column:1/-1}.multi .partes,.multi .mf{margin-left:0}}
 .mov .tag{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 .mov.pase .tag{color:var(--info)}
 .mov.pago .tag{color:var(--warn)}
@@ -248,6 +255,7 @@ tr.sub td{color:var(--muted);font-size:13px}
     <div class="movs" id="movs"></div>
     <div class="row">
       <button class="btn" id="add-pago">+ Pago</button>
+      <button class="btn" id="add-multi">+ Pago de varios cajones</button>
       <button class="btn" id="add-pase">+ Pase entre cajas</button>
     </div>
     <p class="note">Los pagos a proveedores con cuenta (los que tienen deuda) se cargan en la pestaña Proveedores, así se descuentan de lo que se les debe. Pago: sale plata de una caja (depósito, gastos, sueldo del bolsín…). Pase: se mueve plata de una caja a otra (cajón → caja general, depósito al banco…).</p>
@@ -519,7 +527,7 @@ tr.sub td{color:var(--muted);font-size:13px}
   </section>
   <section class="box">
     <h2>Fijos · sueldo mensual
-      <span class="row"><button class="iconbtn" id="em-prev" aria-label="Mes anterior">‹</button><b id="em-mes" style="text-transform:none;letter-spacing:0;color:var(--ink)"></b><button class="iconbtn" id="em-next" aria-label="Mes siguiente">›</button></span>
+      <span class="row"><button class="iconbtn" id="em-prev" aria-label="Mes anterior">‹</button><b id="em-mes" style="text-transform:none;letter-spacing:0;color:var(--ink)"></b><button class="iconbtn" id="em-next" aria-label="Mes siguiente">›</button><button class="btn sm" id="em-print">Imprimir planilla de sueldos</button></span>
     </h2>
     <div class="scroll"><table>
       <thead><tr><th>Empleado</th><th>Jornada</th><th class="num">Trabajó</th><th class="num">Sueldo</th><th class="num">Presentismo</th><th class="num">Adelantos</th><th class="num">A cobrar</th><th></th></tr></thead>
@@ -740,6 +748,8 @@ function horMes(e,m){const n=horNameOf(e);if(!n)return null;const hoy=hoyISO();l
 let SUELDO8=1100000,PRES8=100000,VH=SUELDO8/26/8;
 const JORN_H={'8':56,'7':52,'6.5':50,'4':40,'var':0};
 function setSueldo8(s8,p8){SUELDO8=s8||1100000;PRES8=p8??100000;VH=SUELDO8/26/8}
+const sinPres=(e,m)=>(e.sinPres||[]).includes(m);
+function empSueldoMes(e,m){const s=empSueldo(e);return sinPres(e,m)?{s:s.s,p:0,pBase:s.p,sin:true}:{...s,pBase:s.p,sin:false}}
 function empSueldo(e){if(e.tipo==='Franquero')return{s:0,p:0};if(e.manual)return{s:e.sueldo||0,p:e.present||0};const h=JORN_H[e.jornada||'7']||0;return{s:SUELDO8*h/56,p:PRES8*h/56}}
 const FRQ_OPTS=sel=>'<option value="">—</option>'+Object.values(DB.empleados||{}).filter(e=>e.tipo==='Franquero'&&(!e.baja||e.baja>=hoyISO())).sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(e=>`<option value="${esc(e.id)}"${e.id===sel?' selected':''}>${esc(e.nombre+' '+(e.apellido||'').slice(0,1))}</option>`).join('');
 const empN=id=>{const e=(DB.empleados||{})[id];return e?(e.nombre+' '+(e.apellido||'')).trim():'—'};
@@ -837,7 +847,10 @@ function buildDay(){
 function buildMovs(){
   const c=$('movs');c.innerHTML='';
   if(!state.movs.length)c.innerHTML='<p class="empty">Sin pagos ni pases cargados para este día.</p>';
-  state.movs.forEach((m,i)=>{const row=document.createElement('div');row.className='mov '+m.clase;
+  const hechos=new Set();
+  state.movs.forEach((m,i)=>{
+    if(m.grp){if(hechos.has(m.grp))return;hechos.add(m.grp);c.appendChild(buildMulti(m.grp));return}
+    const row=document.createElement('div');row.className='mov '+m.clase;
     row.innerHTML=m.clase==='pase'
       ?`<span class="tag">Pase</span><select class="f" data-k="origen" aria-label="Sale de">${ACC_OPTS(m.origen)}</select><select class="f" data-k="destino" aria-label="Entra a">${ACC_OPTS(m.destino)}</select><input class="f" data-k="detalle" placeholder="Detalle (opcional)" aria-label="Detalle"><input class="f money" data-k="monto" inputmode="decimal" placeholder="Monto" aria-label="Monto"><button class="del" aria-label="Quitar">×</button>`
       :`<span class="tag">Pago</span><select class="f" data-k="origen" aria-label="Sale de">${ACC_OPTS(m.origen)}</select><select class="f" data-k="cat" aria-label="Categoría">${opts(CATS.map(x=>({v:x,n:x})),m.cat)}</select><input class="f" data-k="detalle" placeholder="Proveedor o detalle" aria-label="Detalle"><input class="f money" data-k="monto" inputmode="decimal" placeholder="Monto" aria-label="Monto"><button class="del" aria-label="Quitar">×</button>
@@ -846,10 +859,34 @@ function buildMovs(){
     row.querySelectorAll('[data-k]').forEach(e=>e.addEventListener('input',()=>{const k=e.dataset.k;m[k]=k==='monto'?parse(e.value):e.value;
       if(k==='origen'&&m.clase==='pago'){const L=accLocal(e.value);m.local=L;const s=row.querySelector('[data-k=local]');if(s)s.value=L}markDirty();calc()}));
     row.querySelector('[data-k=monto]').addEventListener('blur',e=>{e.target.value=fmtIn(parse(e.target.value))});
-    row.querySelector('.del').onclick=()=>{state.movs.splice(i,1);buildMovs();markDirty();calc()};
+    row.querySelector('.del').onclick=()=>{state.movs.splice(state.movs.indexOf(m),1);buildMovs();markDirty();calc()};
     c.appendChild(row)});
-  $('movs-count').textContent=state.movs.length?state.movs.length+(state.movs.length===1?' movimiento':' movimientos'):'';
+  const n=state.movs.filter(m=>!m.grp).length+new Set(state.movs.filter(m=>m.grp).map(m=>m.grp)).size;
+  $('movs-count').textContent=n?n+(n===1?' movimiento':' movimientos'):'';
 }
+/* pago que sale de varios cajones: se guarda como un pago por cajón, con el mismo grupo */
+function buildMulti(g){
+  const P=()=>state.movs.filter(m=>m.grp===g),f=P()[0],box=document.createElement('div');box.className='multi';
+  const gl=f.gl??'__cada';
+  const tot=()=>P().reduce((a,m)=>a+(m.monto||0),0);
+  box.innerHTML=`<div class="mh"><span class="tag">Pago · varios cajones</span><select class="f" data-g="cat" aria-label="Categoría">${opts(CATS.map(x=>({v:x,n:x})),f.cat)}</select><input class="f" data-g="detalle" placeholder="Proveedor o detalle" aria-label="Detalle">
+      <label class="note" style="display:flex;gap:6px;align-items:center;white-space:nowrap">Es gasto de <select class="f" data-g="gl" style="min-width:0;flex:1">${opts([{v:'__cada',n:'Cada local'}],gl)}${LOC_OPTS(gl==='__cada'?null:gl)}</select></label><button class="del" data-gdel aria-label="Quitar pago">×</button></div>
+    <div class="partes">${P().map((m,k)=>`<div class="parte" data-i="${k}"><select class="f" data-p="origen" aria-label="Sale de">${ACC_OPTS(m.origen)}</select><input class="f money" data-p="monto" inputmode="decimal" placeholder="Monto" aria-label="Monto" value="${fmtIn(m.monto)}"><button class="del" data-pdel aria-label="Quitar cajón">×</button></div>`).join('')}</div>
+    <div class="mf"><button type="button" class="btn sm" data-padd>+ Otro cajón</button><span>Total del pago: <b data-tot>${fmt(tot())}</b></span></div>`;
+  box.querySelector('[data-g=detalle]').value=f.detalle||'';
+  const setLocal=()=>P().forEach(m=>{m.local=(m.gl??'__cada')==='__cada'?accLocal(m.origen):m.gl});
+  box.querySelectorAll('[data-g]').forEach(e=>e.addEventListener('input',()=>{const k=e.dataset.g;P().forEach(m=>m[k]=e.value);if(k==='gl')setLocal();markDirty();calc()}));
+  box.querySelectorAll('.parte').forEach(r=>{const m=P()[+r.dataset.i];
+    r.querySelector('[data-p=origen]').addEventListener('input',e=>{m.origen=e.target.value;setLocal();markDirty();calc()});
+    const mi=r.querySelector('[data-p=monto]');mi.addEventListener('input',()=>{m.monto=parse(mi.value);box.querySelector('[data-tot]').textContent=fmt(tot());markDirty();calc()});
+    mi.addEventListener('blur',()=>{mi.value=fmtIn(parse(mi.value))});
+    r.querySelector('[data-pdel]').onclick=()=>{state.movs.splice(state.movs.indexOf(m),1);buildMovs();markDirty();calc()}});
+  box.querySelector('[data-padd]').onclick=()=>{const usados=P().map(m=>m.origen),sig=LOCALES.map(l=>'loc:'+l.id).find(a=>!usados.includes(a))||'loc:'+LOCALES[0].id;
+    const last=P().slice(-1)[0];state.movs.splice(state.movs.indexOf(last)+1,0,{...f,id:uid('m'),origen:sig,local:(f.gl??'__cada')==='__cada'?accLocal(sig):f.gl,monto:0});
+    buildMovs();const q=$('movs').querySelectorAll(`.multi .parte [data-p=monto]`);markDirty()};
+  box.querySelector('[data-gdel]').onclick=()=>{const b=box.querySelector('[data-gdel]');if(b.dataset.ok!=='1'&&tot()){b.dataset.ok='1';b.textContent='¿?';b.title='Tocá de nuevo para quitar todo el pago';return}
+    state.movs=state.movs.filter(m=>m.grp!==g);buildMovs();markDirty();calc()};
+  return box}
 function readDay(){LOCALES.forEach(l=>{state.recT[l.id]={};let ef=0,vi=0;['m','t','n'].forEach(t=>{const a=parse($(`ef-${l.id}-${t}`).value),b=parse($(`vi-${l.id}-${t}`).value);if(a||b)state.recT[l.id][t]={ef:a,vi:b};ef+=a;vi+=b});state.rec[l.id]={ef,vi};
   state.horas[l.id]=parse($('hs-'+l.id).value);state.fq[l.id]={};state.fh[l.id]={};let tot=0;['m','t','n'].forEach(t=>{const e=$(`fq-${l.id}-${t}`).value,h=parse($(`fh-${l.id}-${t}`).value);if(e||h){state.fq[l.id][t]=e;state.fh[l.id][t]=h;tot+=h}});state.horasFr[l.id]=tot});
   const arq={};document.querySelectorAll('[data-arq]').forEach(i=>{if(i.value.trim()!=='')arq[i.dataset.arq]={contado:parse(i.value)}});state.arq=arq;
@@ -950,6 +987,8 @@ $('lock-ok').onclick=async()=>{const c=$('lock-clave').value.trim();if(!c)return
   catch(e){$('lock-msg').textContent='Clave incorrecta.'}};
 $('lock-clave').addEventListener('keydown',e=>{if(e.key==='Enter')$('lock-ok').click()});
 $('add-pago').onclick=()=>{state.movs.push({id:uid('m'),clase:'pago',origen:'general',destino:'',cat:'Proveedor',local:'',detalle:'',monto:0});buildMovs();markDirty();const d=$('movs').querySelectorAll('[data-k=detalle]');d[d.length-1]?.focus()};
+$('add-multi').onclick=()=>{const g=uid('g');['loc:'+LOCALES[0].id,'loc:'+LOCALES[1].id].forEach(o=>state.movs.push({id:uid('m'),clase:'pago',grp:g,gl:'__cada',origen:o,destino:'',cat:'Proveedor',local:accLocal(o),detalle:'',monto:0}));
+  buildMovs();markDirty();const d=$('movs').querySelectorAll('.multi [data-g=detalle]');d[d.length-1]?.focus()};
 $('add-pase').onclick=()=>{state.movs.push({id:uid('m'),clase:'pase',origen:'loc:'+LOCALES[0].id,destino:'general',cat:'',local:'',detalle:'',monto:0});buildMovs();markDirty()};
 $('nota').addEventListener('input',readDay);$('guardar').onclick=guardar;
 function go(f){if(dirty&&$('savemsg').dataset.warned!=='1'){$('savemsg').textContent='Tenés cambios sin guardar. Guardá, o volvé a tocar para descartarlos.';$('savemsg').dataset.warned='1';$('fecha').value=state.fecha;return}
@@ -1187,10 +1226,10 @@ function renderSueldos(){
   $('em-mes').textContent=mesT(m);
   const fx=E.filter(e=>e.tipo!=='Franquero').sort((a,b)=>(a.local||'zz').localeCompare(b.local||'zz')||a.nombre.localeCompare(b.nombre));
   let tS=0,tP=0,tA=0;
-  $('ef-lista').innerHTML=fx.length?fx.map(e=>{const s=empSueldo(e),ad=adelMes(e.id,m),a=ad.reduce((t,x)=>t+x.monto,0);tS+=s.s;tP+=s.p;tA+=a;const w=waNum(e.tel),hm=horMes(e,m);
+  $('ef-lista').innerHTML=fx.length?fx.map(e=>{const s=empSueldoMes(e,m),ad=adelMes(e.id,m),a=ad.reduce((t,x)=>t+x.monto,0);tS+=s.s;tP+=s.p;tA+=a;const w=waNum(e.tel),hm=horMes(e,m);
     return `<tr><td><b>${esc(e.nombre)} ${esc(e.apellido)}</b><div class="note">${e.local?esc(locN(e.local)):'Rota'}${e.manual?' · sueldo especial':''}</div></td><td>${esc((JORNADAS.find(j=>j.v===e.jornada)||{n:'—'}).n)}</td>
       <td class="num">${hm?hm.dH+' días<div class="note">'+String(hm.hH).replace('.',',')+' hs · '+hm.dias+' en el mes</div>':'<span class="note">'+(horNameOf(e)?'sin horario':'no está en Horarios')+'</span>'}</td>
-      <td class="num">${fmt(s.s)}</td><td class="num">${fmt(s.p)}</td><td class="num">${a?fmt(a)+(ad.length>1?'<div class="note">'+ad.length+' adelantos</div>':''):'—'}</td><td class="num"><b>${fmt(s.s+s.p-a)}</b></td>
+      <td class="num">${fmt(s.s)}</td><td class="num">${s.sin?`<span class="note" style="text-decoration:line-through">${fmt(s.pBase)}</span><div class="note neg">no cumplió</div><button class="mini" data-pres="${esc(e.id)}">Devolver</button>`:`${fmt(s.p)}<div><button class="mini" data-pres="${esc(e.id)}">Sacar</button></div>`}</td><td class="num">${a?fmt(a)+(ad.length>1?'<div class="note">'+ad.length+' adelantos</div>':''):'—'}</td><td class="num"><b>${fmt(s.s+s.p-a)}</b></td>
       <td class="num"><button class="mini" data-adel="${esc(e.id)}">+ Adelanto</button>${w?` <a class="mini" href="https://wa.me/${w}?text=${encodeURIComponent(msgSueldo(e,m))}" target="_blank" rel="noopener">Enviar</a>`:''}</td></tr>`+
       (ad.length?ad.map(x=>`<tr class="sub"><td colspan="5">↳ Adelanto ${fCorta(x.fecha)} · sale de ${esc(accN(x.origen))}${x.nota?' · '+esc(x.nota):''}</td><td class="num">${fmt(x.monto)}</td><td colspan="2" class="num"><button class="mini" data-adel-del="${esc(x.id)}">Borrar</button></td></tr>`).join(''):'')}).join('')
     :'<tr><td colspan="7" class="empty">No hay empleados fijos cargados. Agregalos abajo con tipo "Fijo".</td></tr>';
@@ -1209,13 +1248,53 @@ function renderSueldos(){
       const o=f.querySelector('[data-ao]').value,id=b.dataset.adel;
       const x={id:uid('a'),emp:id,empN:empN(id),fecha:f.querySelector('[data-af]').value||hoyISO(),monto,origen:o,origenN:accN(o),nota:f.querySelector('[data-an]').value.trim()};
       ev.target.disabled=true;try{await put('adelantos',x.id,x);DB.adelantos[x.id]=x;renderSueldos()}catch(err){ev.target.disabled=false;f.querySelector('[data-amsg]').textContent='No se pudo guardar.'}}});
+  document.querySelectorAll('[data-pres]').forEach(b=>b.onclick=async()=>{const e=DB.empleados[b.dataset.pres];if(!e)return;const L=new Set(e.sinPres||[]);
+    if(L.has(m))L.delete(m);else L.add(m);const nuevo={...e,sinPres:[...L].sort()};b.disabled=true;
+    try{await put('empleados',e.id,nuevo);DB.empleados[e.id]=nuevo;renderSueldos()}catch(err){b.disabled=false;b.textContent='No se pudo guardar'}});
   document.querySelectorAll('[data-adel-del]').forEach(b=>b.onclick=async()=>{if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='¿Borrar? Tocá de nuevo';return}
     try{await del('adelantos',b.dataset.adelDel);delete DB.adelantos[b.dataset.adelDel];renderSueldos()}catch(e){}});
 }
-function msgSueldo(e,m){const s=empSueldo(e),ad=adelMes(e.id,m),a=ad.reduce((t,x)=>t+x.monto,0),hm=horMes(e,m);
-  return `Hola ${e.nombre}! Resumen de tu sueldo de ${mesT(m)}:\n`+(hm?`• Días trabajados: ${hm.dH} (${String(hm.hH).replace('.',',')} hs)\n`:'')+`• Sueldo: ${fmt(s.s)}\n• Presentismo: ${fmt(s.p)}\n`+(ad.length?ad.map(x=>`• Adelanto ${fCorta(x.fecha)}: −${fmt(x.monto)}`).join('\n')+'\n':'')+`Total a cobrar: ${fmt(s.s+s.p-a)}\nDrugstore`}
+function msgSueldo(e,m){const s=empSueldoMes(e,m),ad=adelMes(e.id,m),a=ad.reduce((t,x)=>t+x.monto,0),hm=horMes(e,m);
+  return `Hola ${e.nombre}! Resumen de tu sueldo de ${mesT(m)}:\n`+(hm?`• Días trabajados: ${hm.dH} (${String(hm.hH).replace('.',',')} hs)\n`:'')+`• Sueldo: ${fmt(s.s)}\n`+(s.sin?'• Presentismo: no corresponde este mes\n':`• Presentismo: ${fmt(s.p)}\n`)+(ad.length?ad.map(x=>`• Adelanto ${fCorta(x.fecha)}: −${fmt(x.monto)}`).join('\n')+'\n':'')+`Total a cobrar: ${fmt(s.s+s.p-a)}\nDrugstore`}
 function msgFranquero(e,m,x){
   return `Hola ${e.nombre}! Resumen de ${mesT(m)}:\n• Días trabajados: ${x.dias}\n• Horas: ${String(x.hs).replace('.',',')}\n• Te corresponde: ${fmt(x.corr)}\n• Ya cobraste: ${fmt(x.cob)}\n`+(x.ad?`• Adelantos: ${fmt(x.ad)}\n`:'')+`Falta cobrar: ${fmt(x.falta)}\nDrugstore`}
+
+/* ======= planilla A4 de sueldos para pagar en efectivo ======= */
+function printSueldos(m){
+  const E=Object.values(DB.empleados||{}).filter(e=>!e.baja||e.baja>=m+'-01');
+  const fx=E.filter(e=>e.tipo!=='Franquero').sort((a,b)=>(a.local||'zz').localeCompare(b.local||'zz')||a.nombre.localeCompare(b.nombre));
+  const fr=E.filter(e=>e.tipo==='Franquero').sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  const hsT=x=>String(x).replace('.',',');let T={s:0,p:0,a:0,c:0};
+  const rf=fx.map(e=>{const s=empSueldoMes(e,m),ad=adelMes(e.id,m),a=ad.reduce((t,x)=>t+x.monto,0),hm=horMes(e,m),c=s.s+s.p-a;T.s+=s.s;T.p+=s.p;T.a+=a;T.c+=c;
+    return `<tr><td><b>${esc(e.nombre)} ${esc(e.apellido||'')}</b><div class="n">${e.local?esc(locN(e.local)):'Rota'} · ${esc((JORNADAS.find(j=>j.v===e.jornada)||{n:''}).n)}</div></td>
+      <td class="c">${hm?hm.dH+' d<div class="n">'+hsT(hm.hH)+' hs</div>':'—'}</td><td class="r">${fmt(s.s)}</td>
+      <td class="r">${s.sin?'<s>'+fmt(s.pBase)+'</s><div class="n">no cumplió</div>':fmt(s.p)}</td>
+      <td class="r">${a?fmt(a)+ad.map(x=>`<div class="n">${fCorta(x.fecha)}: ${fmt(x.monto)}</div>`).join(''):'—'}</td>
+      <td class="r"><b>${fmt(c)}</b></td><td class="f"></td></tr>`}).join('');
+  let F={corr:0,cob:0,ad:0,falta:0,pagar:0};
+  const rfr=fr.map(e=>{const x=frRes(e,m);if(!x.dias&&!x.cob&&!x.ad)return'';F.corr+=x.corr;F.cob+=x.cob;F.ad+=x.ad;F.falta+=x.falta;F.pagar+=Math.max(0,x.falta);
+    return `<tr><td><b>${esc(e.nombre)} ${esc(e.apellido||'')}</b></td><td class="c">${x.dias||'—'}${x.hs?'<div class="n">'+hsT(x.hs)+' hs</div>':''}</td><td class="r">${fmt(x.corr)}</td><td class="r">${fmt(x.cob)}</td><td class="r">${x.ad?fmt(x.ad):'—'}</td><td class="r"><b>${fmt(x.falta)}</b></td><td class="f"></td></tr>`}).join('');
+  const hoy=new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const doc=`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Sueldos ${mesT(m)}</title><style>
+    @page{size:A4;margin:12mm}*{box-sizing:border-box}body{font:11px/1.35 Arial,Helvetica,sans-serif;color:#000;margin:0}
+    header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:10px}
+    h1{font-size:18px;margin:0}h2{font-size:13px;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.04em}
+    table{width:100%;border-collapse:collapse}th,td{border:1px solid #888;padding:5px 6px;vertical-align:top}
+    th{background:#eee;font-size:10px;text-transform:uppercase;text-align:left}td.r,th.r{text-align:right;white-space:nowrap}td.c,th.c{text-align:center}
+    td.f{width:30%}tr{page-break-inside:avoid}tbody tr td{height:44px}.n{font-size:9.5px;color:#444}tfoot td{font-weight:bold;background:#f5f5f5;height:auto}
+    .pie{margin-top:14px;font-size:10px;color:#444}.btn{margin:10px 0;padding:8px 14px;font-size:14px}@media print{.btn{display:none}}
+  </style></head><body><button class="btn" onclick="print()">Imprimir</button>
+  <header><div><h1>Sueldos de ${mesT(m)}</h1><div>Drugstore · pago en efectivo</div></div><div>Impreso el ${hoy}</div></header>
+  ${fx.length?`<h2>Fijos</h2><table><thead><tr><th>Empleado</th><th class="c">Trabajó</th><th class="r">Sueldo</th><th class="r">Presentismo</th><th class="r">Adelantos</th><th class="r">A cobrar</th><th>Firma y aclaración</th></tr></thead><tbody>${rf}</tbody>
+    <tfoot><tr><td>Total fijos</td><td></td><td class="r">${fmt(T.s)}</td><td class="r">${fmt(T.p)}</td><td class="r">${fmt(T.a)}</td><td class="r">${fmt(T.c)}</td><td></td></tr></tfoot></table>`:''}
+  ${rfr?`<h2>Franqueros</h2><table><thead><tr><th>Empleado</th><th class="c">Días</th><th class="r">Le corresponde</th><th class="r">Ya cobró</th><th class="r">Adelantos</th><th class="r">Falta cobrar</th><th>Firma y aclaración</th></tr></thead><tbody>${rfr}</tbody>
+    <tfoot><tr><td>Total franqueros</td><td></td><td class="r">${fmt(F.corr)}</td><td class="r">${fmt(F.cob)}</td><td class="r">${fmt(F.ad)}</td><td class="r">${fmt(F.falta)}</td><td></td></tr></tfoot></table>`:''}
+  <p class="pie">Total a pagar en efectivo: <b>${fmt(T.c+F.pagar)}</b>${F.pagar?' (fijos '+fmt(T.c)+' + franqueros '+fmt(F.pagar)+')':''}. Con su firma, cada empleado declara haber recibido el importe indicado.</p>
+  <script>setTimeout(()=>print(),400)<\/script></body></html>`;
+  const w=window.open('','_blank');if(w){w.document.open();w.document.write(doc);w.document.close();return}
+  const f=document.createElement('iframe');f.style.cssText='position:fixed;width:0;height:0;border:0';document.body.appendChild(f);f.contentDocument.open();f.contentDocument.write(doc.replace('<script>setTimeout(()=>print(),400)<\/script>',''));f.contentDocument.close();
+  setTimeout(()=>{f.contentWindow.print();setTimeout(()=>f.remove(),2000)},400)}
+$('em-print').onclick=()=>printSueldos(emMes);
 $('em-prev').onclick=()=>{emMes=addMes(emMes,-1);renderSueldos()};$('em-next').onclick=()=>{emMes=addMes(emMes,1);renderSueldos()};
 function eJornada(){const man=$('e-man').checked;$('e-sue').disabled=!man;$('e-pre').disabled=!man;if(!man){const x=empSueldo({tipo:$('e-tipo').value,jornada:$('e-jor').value});$('e-sue').value=fmtIn(Math.round(x.s));$('e-pre').value=fmtIn(Math.round(x.p))}}
 function fillHorSel(sel){$('e-hor').innerHTML='<option value="">Automático (por nombre)</option>'+horNombres().sort().map(n=>`<option value="${esc(n)}"${n===sel?' selected':''}>${esc(niceH(n))}</option>`).join('')}
@@ -1225,11 +1304,11 @@ function editEmp(id){const e=DB.empleados[id];if(!e)return;eEdit=id;$('e-nom').v
   $('e-bl-i').value=e.blanco?'1':'0';$('e-tipo').value=e.tipo;$('e-loc').value=e.local||'';$('e-jor').value=e.jornada||'7';$('e-man').checked=!!e.manual;eJornada();if(e.manual){$('e-sue').value=fmtIn(e.sueldo);$('e-pre').value=fmtIn(e.present)}$('e-baja').value=e.baja||'';$('e-nota').value=e.nota||'';fillHorSel(e.horNombre||'');
   $('e-form-t').textContent='Editar empleado';$('e-guardar').textContent='Guardar cambios';$('e-cancelar').hidden=false;$('e-form-t').scrollIntoView({behavior:'smooth',block:'start'})}
 function empDoc(o){return{horNombre:o.horNombre||'',manual:!!o.manual,id:o.id||uid('e'),nombre:o.nombre,apellido:o.apellido||'',ingreso:o.ingreso||'',tel:o.tel||'',blanco:!!o.blanco,tipo:o.tipo||'Fijo',local:o.local||'',localN:o.local?locN(o.local):'',
-  jornada:o.jornada||(o.tipo==='Franquero'?'var':'7'),sueldo:o.sueldo??0,present:o.present??0,baja:o.baja||'',nota:o.nota||''}}
+  jornada:o.jornada||(o.tipo==='Franquero'?'var':'7'),sueldo:o.sueldo??0,present:o.present??0,baja:o.baja||'',nota:o.nota||'',sinPres:o.sinPres||[]}}
 $('e-guardar').onclick=async()=>{const nombre=$('e-nom').value.trim();if(!nombre){$('e-msg').textContent='Escribí al menos el nombre.';return}
   if(!$('e-ing').value){$('e-msg').textContent='Falta la fecha de ingreso: sin ella no se calculan vacaciones ni aguinaldo.';return}
   const e=empDoc({id:eEdit,nombre,apellido:$('e-ape').value.trim(),ingreso:$('e-ing').value,tel:$('e-tel').value.trim(),blanco:$('e-bl-i').value==='1',tipo:$('e-tipo').value,local:$('e-loc').value,
-    jornada:$('e-tipo').value==='Franquero'?'var':$('e-jor').value,manual:$('e-man').checked,sueldo:parse($('e-sue').value),present:parse($('e-pre').value),baja:$('e-baja').value,nota:$('e-nota').value.trim(),horNombre:$('e-hor').value});
+    jornada:$('e-tipo').value==='Franquero'?'var':$('e-jor').value,manual:$('e-man').checked,sueldo:parse($('e-sue').value),present:parse($('e-pre').value),baja:$('e-baja').value,nota:$('e-nota').value.trim(),horNombre:$('e-hor').value,sinPres:(eEdit&&DB.empleados[eEdit]&&DB.empleados[eEdit].sinPres)||[]});
   if(!online){$('e-msg').textContent='Sin conexión con la planilla.';return}
   $('e-guardar').disabled=true;try{await put('empleados',e.id,e);DB.empleados[e.id]=e;const was=!!eEdit;eLimpiar();renderEmpleados();$('e-msg').textContent=was?'Cambios guardados.':'Empleado agregado.'}
   catch(x){$('e-msg').textContent='No se pudo guardar. Probá de nuevo.'}$('e-guardar').disabled=false};
