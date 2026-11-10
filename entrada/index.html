@@ -45,14 +45,8 @@
 <script>
 /* ============ CONFIGURACIÓN ============ */
 // Pegá acá la URL de la aplicación web de Apps Script (termina en /exec)
-const API_URL = 'https://script.google.com/macros/s/AKfycbzuNYKKsyjbLxv8wzM63wRTx84AmA4R6j4l138UEW_IB4S-oS_-B01Xgbt4WAgIVXM3Cw/exec';
-
-const EMPLEADOS = [
-  'Agustin','Ale','Alexis','Bautista','Brisa','Cami G','Caren','Daiana','Enzo','Eric','Esteban',
-  'Ezequiel','Federica','Fiorella','Gonzalo','Guille','Ian','Jano','Joaquin','Karen','Leo','Lucia',
-  'Melina','Mili O','Mili.B','Morena','Nacho.G','Paloma','Rodrigo','Santiago','Stefi','Tiziano',
-  'Tomas','Valentin','Yael'
-];
+const API_URL = 'PEGAR_URL_DE_APPS_SCRIPT';
+// La lista de empleados sale de la pestaña "Empleados" de la planilla.
 /* ====================================== */
 
 const $ = s => document.querySelector(s);
@@ -82,10 +76,7 @@ function pantallaEmpleado(local, k) {
     <div id="form">
       <div class="card">
         <label for="emp">¿Quién sos?</label>
-        <select id="emp">
-          <option value="">Elegí tu nombre</option>
-          ${EMPLEADOS.map(n => `<option ${n === ultimo ? 'selected' : ''}>${esc(n)}</option>`).join('')}
-        </select>
+        <select id="emp" disabled><option value="">Cargando nombres…</option></select>
       </div>
       <div class="card">
         <label>Turno</label>
@@ -106,6 +97,21 @@ function pantallaEmpleado(local, k) {
     $('#fecha').textContent = d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
   };
   tic(); setInterval(tic, 1000);
+
+  const cargarNombres = async () => {
+    const sel = $('#emp');
+    try {
+      const r = await api({ accion: 'empleados', local, k });
+      if (!r.ok) throw new Error(r.error || 'Error');
+      sel.innerHTML = '<option value="">Elegí tu nombre</option>' +
+        r.empleados.map(n => `<option ${n === ultimo ? 'selected' : ''}>${esc(n)}</option>`).join('');
+      sel.disabled = false;
+    } catch (e) {
+      sel.innerHTML = '<option value="">No se pudo cargar la lista</option>';
+      $('#msg').innerHTML = `<div class="error">No se pudo cargar la lista de nombres (${esc(e.message || e)}). Revisá la conexión y recargá la página.</div>`;
+    }
+  };
+  cargarNombres();
 
   $('#marcar').onclick = async () => {
     const empleado = $('#emp').value;
@@ -144,11 +150,6 @@ function ubicacion() {
 function mostrarResultado(r, sinUbic) {
   const tarde = r.estado === 'Tarde';
   $('#form').classList.add('oculto');
-  const texto =
-`🕒 ENTRADA – ${r.local}
-👤 ${r.empleado} · Turno ${r.turno}
-Entrada: ${r.hora} (esperado ${r.esperado})
-${tarde ? `🔴 Llegó ${r.minTarde} min tarde` : '🟢 A tiempo'}`;
   $('#msg').innerHTML = `
     ${r.repetido ? '<div class="aviso">Ya tenías la entrada marcada en este turno. Queda la primera.</div>' : ''}
     ${sinUbic ? '<div class="aviso">No se pudo tomar la ubicación. Activá la ubicación del celular para la próxima.</div>' : ''}
@@ -156,9 +157,7 @@ ${tarde ? `🔴 Llegó ${r.minTarde} min tarde` : '🟢 A tiempo'}`;
       <div>${esc(r.empleado)} · Turno ${esc(r.turno)}</div>
       <div class="grande">${esc(r.hora)}</div>
       <div>${tarde ? `Llegaste ${r.minTarde} min tarde (entrada ${esc(r.esperado)})` : '¡A tiempo! ✔'}</div>
-    </div>
-    <button class="btn sec" id="wa">Enviar al grupo de WhatsApp</button>`;
-  $('#wa').onclick = () => { location.href = 'https://wa.me/?text=' + encodeURIComponent(texto); };
+    </div>`;
 }
 
 /* ---------- Pantalla para imprimir QR ---------- */
