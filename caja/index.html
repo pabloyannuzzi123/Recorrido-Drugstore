@@ -250,11 +250,11 @@ tr.sub td{color:var(--muted);font-size:13px}
   <section class="box">
     <h2>2 · Sueldos del día <small id="vh-label"></small></h2>
     <p class="aviso" id="su-hor" hidden style="background:var(--info-soft);color:var(--info)"></p>
-    <p class="note">Las horas del local salen del horario. Cargá cuántas hizo un franquero: se le paga hoy desde el cajón, y el resto va al bolsín del local para los fijos.</p>
+    <p class="note">Las horas del local salen del horario. <b>A guardar</b> es el sueldo de todo el día (fijos y franqueros): no se descuenta solo. Cuando lo guarden en el bolsín, cargá el monto en <b>Guardado</b> y recién ahí baja del cajón. Si un franquero no cobra hoy y prefiere acumular, destildá "cobró": le queda para cobrar en Empleados.</p>
     <div class="scroll"><table>
-      <thead><tr><th>Local</th><th class="num">Horas local</th><th>Franquero 1 · horas</th><th>Franquero 2 · horas</th><th class="num">Pago franqueros</th><th class="num">Al bolsín</th></tr></thead>
+      <thead><tr><th>Local</th><th class="num">Horas local</th><th>Franquero mañana · hs</th><th>Franquero tarde · hs</th><th>Franquero noche · hs</th><th class="num">Franqueros</th><th class="num">A guardar</th><th class="num">Guardado en bolsín</th></tr></thead>
       <tbody id="su-body"></tbody>
-      <tfoot><tr><td>Total</td><td class="num" id="t-hs"></td><td class="num" id="t-hf"></td><td></td><td class="num" id="t-fr"></td><td class="num" id="t-bol"></td></tr></tfoot>
+      <tfoot><tr><td>Total</td><td class="num" id="t-hs"></td><td class="num" id="t-hf"></td><td></td><td></td><td class="num" id="t-fr"></td><td class="num" id="t-bol"></td><td class="num" id="t-guard"></td></tr></tfoot>
     </table></div>
   </section>
 
@@ -283,7 +283,7 @@ tr.sub td{color:var(--muted);font-size:13px}
     <div class="summary">
       <div class="cell hero"><span class="k">Resultado del día</span><span class="v" id="r-res"></span><span class="s">recaudado − sueldos − pagos</span></div>
       <div class="cell"><span class="k">Efectivo en cajones</span><span class="v" id="r-caj"></span><span class="s">saldo al cierre, 9 locales</span></div>
-      <div class="cell"><span class="k">En bolsines</span><span class="v" id="r-bol"></span><span class="s">sueldos de fijos acumulados</span></div>
+      <div class="cell"><span class="k">En bolsines</span><span class="v" id="r-bol"></span><span class="s">sueldos guardados</span></div>
     </div>
     <div class="scroll"><table>
       <thead><tr><th>Caja</th><th class="num">Movimiento del día</th><th class="num">Saldo al cierre</th></tr></thead>
@@ -766,24 +766,29 @@ const FRQ_OPTS=sel=>'<option value="">—</option>'+Object.values(DB.empleados||
 const empN=id=>{const e=(DB.empleados||{})[id];return e?(e.nombre+' '+(e.apellido||'')).trim():'—'};
 const provName=id=>((DB.proveedores||{})[id]||{}).nombre||'Proveedor';
 function normDia(d){
-  d={...d};d.recT=d.recT||{};d.frq=d.frq||{};d.frq2=d.frq2||{};d.hf1=d.hf1||{};d.hf2=d.hf2||{};d.fq=d.fq||{};d.fh=d.fh||{};d.arq=d.arq||{};d.rec=d.rec||{};d.horas=d.horas||{};d.horasFr=d.horasFr||{};d.nota=d.nota||'';
+  d={...d};d.recT=d.recT||{};d.frq=d.frq||{};d.frq2=d.frq2||{};d.hf1=d.hf1||{};d.hf2=d.hf2||{};d.fq=d.fq||{};d.fh=d.fh||{};d.arq=d.arq||{};d.rec=d.rec||{};d.horas=d.horas||{};d.horasFr=d.horasFr||{};d.nota=d.nota||'';d.guard=d.guard||{};d.fpag=d.fpag||{};
   LOCALES.forEach(l=>{const r=d.rec[l.id];if(!d.recT[l.id]&&r&&(r.ef||r.vi))d.recT[l.id]={m:{ef:r.ef||0,vi:r.vi||0}}});
   // días guardados con el formato anterior (franquero 1 y 2)
   LOCALES.forEach(l=>{if(!d.fq[l.id]&&(d.frq[l.id]||d.frq2[l.id]||d.horasFr[l.id])){d.fq[l.id]={m:d.frq[l.id]||''};d.fh[l.id]={m:d.hf1[l.id]??d.horasFr[l.id]??0};if(d.frq2[l.id]||d.hf2[l.id]){d.fq[l.id].t=d.frq2[l.id]||'';d.fh[l.id].t=d.hf2[l.id]||0}}});
   if(!d.movs){d.movs=(d.pagos||[]).map(p=>({id:uid('m'),clase:'pago',origen:p.medio==='Virtual'?'banco':'general',destino:'',cat:p.tipo==='Gasto general'?'Gasto general':p.tipo,local:p.local||'',detalle:p.detalle||'',monto:p.monto||0}))}
   delete d.pagos;return d}
-function blank(f){return{fecha:f,mes:f.slice(0,7),rec:{},recT:{},horas:{},horasFr:{},frq:{},frq2:{},hf1:{},hf2:{},fq:{},fh:{},movs:[],arq:{},nota:''}}
+function blank(f){return{bolModo:2,guard:{},fpag:{},fecha:f,mes:f.slice(0,7),rec:{},recT:{},horas:{},horasFr:{},frq:{},frq2:{},hf1:{},hf2:{},fq:{},fh:{},movs:[],arq:{},nota:''}}
 
+/* sueldos del día de un local. Modo 2: no se descuenta solo; baja del cajón lo que se carga como guardado,
+   y los franqueros que cobran ese día cobran del bolsín. Modo 1 (días viejos): se apartaba solo. */
+function sueLoc(d,l){const vh=d.vh||VH,hs=d.horas[l.id]??horasDefault(l.g,d.fecha),hf=Math.min(d.horasFr[l.id]||0,hs),m2=d.bolModo===2;
+  let frPag=0,frAcu=0;Object.entries(d.fq[l.id]||{}).forEach(([t,e])=>{const x=((d.fh[l.id]||{})[t]||0)*vh;if(!x)return;if(m2&&((d.fpag||{})[l.id]||{})[t]===false)frAcu+=x;else frPag+=x});
+  return{vh,hs,hf,m2,fr:hf*vh,bol:(hs-hf)*vh,aG:hs*vh,guard:m2?((d.guard||{})[l.id]||0):(hs-hf)*vh,frPag,frAcu}}
+function pendGuardar(L,hasta){let p=0;Object.values(DB.dias).forEach(d0=>{if(d0.fecha>=hasta||d0.bolModo!==2)return;const d=normDia(d0),x=sueLoc(d,LOCALES.find(l=>l.id===L));p+=x.aG-x.guard});return Math.round(p)}
 /* calcula lo que hace un día en cada caja */
 function diaCalc(d){
   const vh=d.vh||VH;const r={ef:0,vi:0,hs:0,hf:0,fr:0,bol:0,pagos:0,pases:0,porLoc:{},acc:{},cats:{}};
   const mv=(a,m)=>{r.acc[a]=(r.acc[a]||0)+m};
   LOCALES.forEach(l=>{const x=d.rec[l.id]||{},ef=x.ef||0,vi=x.vi||0;
-    const hs=d.horas[l.id]??horasDefault(l.g,d.fecha),hf=Math.min(d.horasFr[l.id]||0,hs);
-    const fr=hf*vh,bol=(hs-hf)*vh;
-    r.ef+=ef;r.vi+=vi;r.hs+=hs;r.hf+=hf;r.fr+=fr;r.bol+=bol;
-    mv('loc:'+l.id,ef-fr-bol);mv('bol:'+l.id,bol);mv('banco',vi);
-    r.porLoc[l.id]={rec:ef+vi,sue:fr+bol,pag:0,fr,bol}});
+    const S=sueLoc(d,l),hs=S.hs,hf=S.hf,fr=S.fr,bol=S.bol;
+    r.ef+=ef;r.vi+=vi;r.hs+=hs;r.hf+=hf;r.fr+=fr;r.bol+=bol;r.aG=(r.aG||0)+S.aG;r.guard=(r.guard||0)+S.guard;
+    if(S.m2){mv('loc:'+l.id,ef-S.guard);mv('bol:'+l.id,S.guard-S.frPag)}else{mv('loc:'+l.id,ef-fr-bol);mv('bol:'+l.id,bol)}mv('banco',vi);
+    r.porLoc[l.id]={rec:ef+vi,sue:fr+bol,pag:0,fr,bol,S}});
   r.porLoc['']={rec:0,sue:0,pag:0};r.porLoc.deposito={rec:0,sue:0,pag:0};
   d.movs.forEach(m=>{const v=m.monto||0;if(!v)return;
     if(m.clase==='pase'){mv(m.origen,-v);mv(m.destino,v);r.pases+=v}
@@ -811,9 +816,11 @@ function ledger(){
   const cfg=DB.config,ini=cfg.inicio||'2000-01-01',E=[];
   Object.entries(cfg.saldos||{}).forEach(([a,v])=>{if(v)E.push({f:ini,a,m:v,t:'Saldo inicial',o:0})});
   Object.values(DB.dias).forEach(d0=>{if(d0.fecha<ini)return;const d=normDia(d0),vh=d.vh||VH;
-    LOCALES.forEach(l=>{const x=d.rec[l.id]||{},hs=d.horas[l.id]??horasDefault(l.g,d.fecha),hf=Math.min(d.horasFr[l.id]||0,hs);
+    LOCALES.forEach(l=>{const x=d.rec[l.id]||{},S=sueLoc(d,l),hs=S.hs,hf=S.hf;
       if(x.ef)E.push({f:d.fecha,a:'loc:'+l.id,m:x.ef,t:'Recaudación efectivo',o:1});
       if(x.vi)E.push({f:d.fecha,a:'banco',m:x.vi,t:'Recaudación virtual '+l.n,o:1});
+      if(S.m2){if(S.guard){E.push({f:d.fecha,a:'loc:'+l.id,m:-S.guard,t:'Guardado en el bolsín',o:2});E.push({f:d.fecha,a:'bol:'+l.id,m:S.guard,t:'Guardado del cajón',o:2})}
+        if(S.frPag)E.push({f:d.fecha,a:'bol:'+l.id,m:-S.frPag,t:'Pago a franqueros del día',o:2});return}
       if(hf)E.push({f:d.fecha,a:'loc:'+l.id,m:-hf*vh,t:'Pago franquero ('+String(hf).replace('.',',')+' hs)',o:2});
       if(hs-hf){E.push({f:d.fecha,a:'loc:'+l.id,m:-(hs-hf)*vh,t:'Al bolsín de sueldos',o:2});E.push({f:d.fecha,a:'bol:'+l.id,m:(hs-hf)*vh,t:'Sueldo del día (fijos)',o:2})}});
     Object.entries(d.arq||{}).forEach(([a,x])=>{if(x.dif)E.push({f:d.fecha,a,m:x.dif,t:x.dif<0?'Faltante de arqueo':'Sobrante de arqueo',o:6})});
@@ -843,11 +850,13 @@ function buildDay(){
       rb.appendChild(tr);tr.querySelector(`#ef-${l.id}-${t}`).value=fmtIn(x.ef);tr.querySelector(`#vi-${l.id}-${t}`).value=fmtIn(x.vi)});
     const hs=state.horas[l.id]??horasDefault(l.g,state.fecha);
     const ts=document.createElement('tr');
-    ts.innerHTML=`<td class="loc">${l.n}</td><td class="num"><input class="f hrs" id="hs-${l.id}" inputmode="decimal"></td>`+['m','t','n'].map(t=>`<td><span class="row" style="flex-wrap:nowrap"><select class="f" id="fq-${l.id}-${t}" style="min-width:104px" aria-label="Franquero ${t}">${FRQ_OPTS((state.fq[l.id]||{})[t])}</select><input class="f hrs" id="fh-${l.id}-${t}" inputmode="decimal" placeholder="0" style="max-width:62px" aria-label="Horas"></span></td>`).join('')+`<td class="num" id="fr-${l.id}"></td><td class="num" id="bo-${l.id}"></td>`;
-    sb.appendChild(ts);ts.querySelector('#hs-'+l.id).value=String(hs).replace('.',',');['m','t','n'].forEach(t=>{const h=(state.fh[l.id]||{})[t];ts.querySelector(`#fh-${l.id}-${t}`).value=h?String(h).replace('.',','):'';
+    ts.innerHTML=`<td class="loc">${l.n}</td><td class="num"><input class="f hrs" id="hs-${l.id}" inputmode="decimal"></td>`+['m','t','n'].map(t=>`<td><span class="row" style="flex-wrap:nowrap"><select class="f" id="fq-${l.id}-${t}" style="min-width:104px" aria-label="Franquero ${t}">${FRQ_OPTS((state.fq[l.id]||{})[t])}</select><input class="f hrs" id="fh-${l.id}-${t}" inputmode="decimal" placeholder="0" style="max-width:62px" aria-label="Horas"></span>${state.bolModo===2?`<label class="note fpl" id="fpl-${l.id}-${t}" style="display:flex;gap:4px;align-items:center;margin-top:3px"><input type="checkbox" id="fp-${l.id}-${t}"${((state.fpag[l.id]||{})[t])===false?'':' checked'}> cobró hoy</label>`:''}</td>`).join('')+`<td class="num" id="fr-${l.id}"></td><td class="num" id="bo-${l.id}"></td><td class="num">${state.bolModo===2?`<span class="row" style="flex-wrap:nowrap;justify-content:flex-end"><input class="f money" id="gu-${l.id}" inputmode="decimal" placeholder="0" style="max-width:120px" aria-label="Guardado en bolsín ${l.n}"><button type="button" class="mini" data-gtodo="${l.id}" title="Poner todo lo que hay que guardar">Todo</button></span><div class="note" id="gp-${l.id}"></div>`:'<span class="note">automático<br>(día cargado antes)</span>'}</td>`;
+    sb.appendChild(ts);ts.querySelector('#hs-'+l.id).value=String(hs).replace('.',',');if(state.bolModo===2){const g=state.guard[l.id];ts.querySelector('#gu-'+l.id).value=g?fmtIn(g):''}['m','t','n'].forEach(t=>{const h=(state.fh[l.id]||{})[t];ts.querySelector(`#fh-${l.id}-${t}`).value=h?String(h).replace('.',','):'';
       ts.querySelector(`#fq-${l.id}-${t}`).addEventListener('change',e=>{const hi=ts.querySelector(`#fh-${l.id}-${t}`);if(e.target.value&&!parse(hi.value))hi.value=String(hTurno(l.id,t,state.fecha)).replace('.',',');if(!e.target.value)hi.value='';readDay()})})});
   rb.querySelectorAll('input').forEach(i=>{i.addEventListener('input',readDay);i.addEventListener('blur',()=>{i.value=fmtIn(parse(i.value))})});
-  sb.querySelectorAll('input,select').forEach(i=>i.addEventListener('input',readDay));
+  sb.querySelectorAll('input,select').forEach(i=>i.addEventListener(i.type==='checkbox'?'change':'input',readDay));
+  sb.querySelectorAll('[id^=gu-]').forEach(i=>i.addEventListener('blur',()=>{i.value=i.value.trim()?fmtIn(parse(i.value)):''}));
+  sb.querySelectorAll('[data-gtodo]').forEach(b=>b.onclick=()=>{const L=b.dataset.gtodo,l=LOCALES.find(x=>x.id===L),S=sueLoc(state,l),p=Math.max(0,pendGuardar(L,state.fecha));$('gu-'+L).value=fmtIn(Math.round(S.aG+p));readDay()});
   const ab=$('arq-body');ab.innerHTML='';
   ACC.filter(a=>a.id!=='banco').forEach(a=>{const tr=document.createElement('tr');const x=state.arq[a.id];
     tr.innerHTML=`<td class="loc">${esc(a.n)}</td><td class="num" id="as-${a.id.replace(':','-')}"></td><td class="num"><input class="f money" data-arq="${a.id}" inputmode="decimal" placeholder="—" style="max-width:150px"></td><td class="num" id="ad-${a.id.replace(':','-')}"></td>`;
@@ -899,7 +908,9 @@ function buildMulti(g){
     state.movs=state.movs.filter(m=>m.grp!==g);buildMovs();markDirty();calc()};
   return box}
 function readDay(){LOCALES.forEach(l=>{state.recT[l.id]={};let ef=0,vi=0;['m','t','n'].forEach(t=>{const a=parse($(`ef-${l.id}-${t}`).value),b=parse($(`vi-${l.id}-${t}`).value);if(a||b)state.recT[l.id][t]={ef:a,vi:b};ef+=a;vi+=b});state.rec[l.id]={ef,vi};
-  state.horas[l.id]=parse($('hs-'+l.id).value);state.fq[l.id]={};state.fh[l.id]={};let tot=0;['m','t','n'].forEach(t=>{const e=$(`fq-${l.id}-${t}`).value,h=parse($(`fh-${l.id}-${t}`).value);if(e||h){state.fq[l.id][t]=e;state.fh[l.id][t]=h;tot+=h}});state.horasFr[l.id]=tot});
+  state.horas[l.id]=parse($('hs-'+l.id).value);state.fq[l.id]={};state.fh[l.id]={};let tot=0;['m','t','n'].forEach(t=>{const e=$(`fq-${l.id}-${t}`).value,h=parse($(`fh-${l.id}-${t}`).value);if(e||h){state.fq[l.id][t]=e;state.fh[l.id][t]=h;tot+=h}});state.horasFr[l.id]=tot;
+  if(state.bolModo===2){state.fpag[l.id]={};['m','t','n'].forEach(t=>{const c=$(`fp-${l.id}-${t}`),lb=$(`fpl-${l.id}-${t}`);if(lb)lb.style.visibility=state.fq[l.id][t]?'visible':'hidden';if(c&&!c.checked&&state.fq[l.id][t])state.fpag[l.id][t]=false});
+    const g=$('gu-'+l.id);if(g&&g.value.trim())state.guard[l.id]=parse(g.value);else delete state.guard[l.id]}});
   const arq={};document.querySelectorAll('[data-arq]').forEach(i=>{if(i.value.trim()!=='')arq[i.dataset.arq]={contado:parse(i.value)}});state.arq=arq;
   state.nota=$('nota').value;markDirty();calc()}
 function calc(){
@@ -910,9 +921,14 @@ function calc(){
     ie.className='inf '+(se?'ok':'dif');ie.innerHTML=se?'✓ informado'+esc(q):`<button type="button" class="inf-b" data-use="ef|${l.id}|${t}" title="Copiar">↓ ${fmt(cg)}</button>`;
     iv.className='inf '+(sv?'ok':'dif');iv.innerHTML=sv?'✓':`<button type="button" class="inf-b" data-use="vi|${l.id}|${t}" title="Copiar">↓ ${fmt(c.vi)}</button>`}));
   LOCALES.forEach(l=>{const x=state.rec[l.id]||{};$('to-'+l.id).textContent=fmt((x.ef||0)+(x.vi||0));
-    const p=r.porLoc[l.id];$('fr-'+l.id).textContent=p.fr?fmt(p.fr):'—';$('bo-'+l.id).textContent=fmt(p.bol)});
+    ['m','t','n'].forEach(t=>{const lb=$(`fpl-${l.id}-${t}`);if(lb)lb.style.visibility=(state.fq[l.id]||{})[t]?'visible':'hidden'});
+    const p=r.porLoc[l.id],S=p.S;$('fr-'+l.id).innerHTML=p.fr?fmt(p.fr)+(S.frAcu?`<div class="note">acumula ${fmt(S.frAcu)}</div>`:''):'—';
+    $('bo-'+l.id).textContent=fmt(S.m2?S.aG:p.bol);
+    const gp=$('gp-'+l.id);if(gp){const pa=pendGuardar(l.id,state.fecha),falta=Math.round(S.aG+pa-S.guard);
+      gp.innerHTML=(pa>0?`de días anteriores ${fmt(pa)}<br>`:'')+(falta>0?`<span class="neg">falta guardar ${fmt(falta)}</span>`:falta<0?`guardó ${fmt(-falta)} de más`:S.guard?'✓ guardado':'')}});
+  $('t-guard').textContent=fmt(r.guard||0);
   $('t-ef').textContent=fmt(r.ef);$('t-vi').textContent=fmt(r.vi);$('t-to').textContent=fmt(r.ef+r.vi);
-  $('t-hs').textContent=String(r.hs).replace('.',',')+' hs';$('t-hf').textContent=String(r.hf).replace('.',',')+' hs';$('t-fr').textContent=fmt(r.fr);$('t-bol').textContent=fmt(r.bol);
+  $('t-hs').textContent=String(r.hs).replace('.',',')+' hs';$('t-hf').textContent=String(r.hf).replace('.',',')+' hs';$('t-fr').textContent=fmt(r.fr);$('t-bol').textContent=fmt(r.aG||0);
   $('vh-label').textContent='hora a '+fmt(vh)+' · sin presentismo';
   $('r-res').textContent=fmt(r.res);$('r-res').classList.toggle('neg',r.res<0);
   // arqueo: saldo según la app sin las diferencias de este día
@@ -1232,12 +1248,15 @@ function estadoPago(id,m,total){const P=pagosSueldo(id,m),pag=P.reduce((t,x)=>t+
 function estadoHTML(id,m,total){const x=estadoPago(id,m,total);if(total<=0&&!x.P.length)return'';
   if(x.ok)return `<div><span class="pill">✓ Pagado ${fCorta(x.P[x.P.length-1].fecha)}</span></div>`;
   return (x.P.length?`<div class="note">pagado ${fmt(x.pag)}</div>`:'')+`<div><button class="mini" data-pagar="${esc(id)}" data-falta="${x.falta}">${x.P.length?'Pagar lo que falta':'Marcar pagado'}</button></div>`}
-function pagoForm(id,falta,m){const e=DB.empleados[id],o=e.local?'bol:'+e.local:'general';
+function frAcuLoc(id,m){const c={};Object.values(DB.dias).forEach(d0=>{if(d0.fecha.slice(0,7)!==m||d0.bolModo!==2)return;const d=normDia(d0);
+  Object.entries(d.fq).forEach(([L,o])=>Object.entries(o||{}).forEach(([t,e])=>{if(e===id&&((d.fpag[L]||{})[t])===false)c[L]=(c[L]||0)+(((d.fh[L]||{})[t])||0)}))});
+  return Object.keys(c).sort((a,b)=>c[b]-c[a])[0]||''}
+function pagoForm(id,falta,m){const e=DB.empleados[id],L=e.tipo==='Franquero'?frAcuLoc(id,m):e.local,o=L?'bol:'+L:'general';
   return `<tr class="sub" data-pgf="${esc(id)}"><td colspan="8"><div class="row"><b>Pago del sueldo de ${esc(mesT(m))} a ${esc(e.nombre)}</b><input class="f money" data-pm value="${fmtIn(falta)}" inputmode="decimal" style="max-width:140px" aria-label="Monto"><input type="date" class="f" data-pf value="${hoyISO()}" style="max-width:160px" aria-label="Fecha"><label class="note">Sale de <select class="f" data-po style="max-width:200px">${ACC_OPTS(o)}</select></label><input class="f" data-pn placeholder="Nota (opcional)" style="max-width:180px"><button class="btn sm primary" data-pok>Guardar pago</button><button class="btn sm" data-px>Cancelar</button><span class="note" data-pmsg></span></div></td></tr>`}
-function frMes(id,m){let dias=0,hs=0,cob=0;Object.values(DB.dias).forEach(d0=>{if(d0.fecha.slice(0,7)!==m)return;const d=normDia(d0),vh=d.vh||VH;let any=false;
-  Object.entries(d.fq).forEach(([L,o])=>Object.entries(o||{}).forEach(([t,e])=>{if(e===id){const h=((d.fh||{})[L]||{})[t]||0;if(h){hs+=h;cob+=h*vh;any=true}}}));if(any)dias++});return{dias,hs,cob}}
+function frMes(id,m){let dias=0,hs=0,cob=0,dev=0;Object.values(DB.dias).forEach(d0=>{if(d0.fecha.slice(0,7)!==m)return;const d=normDia(d0),vh=d.vh||VH;let any=false;
+  Object.entries(d.fq).forEach(([L,o])=>Object.entries(o||{}).forEach(([t,e])=>{if(e===id){const h=((d.fh||{})[L]||{})[t]||0;if(h){hs+=h;dev+=h*vh;if(!(d.bolModo===2&&((d.fpag||{})[L]||{})[t]===false))cob+=h*vh;any=true}}}));if(any)dias++});return{dias,hs,cob,dev}}
 function frRes(e,m){const c=frMes(e.id,m),hm=horMes(e,m),ad=adelMes(e.id,m).reduce((t,y)=>t+y.monto,0);
-  const dias=hm?hm.dH:c.dias,hs=hm?hm.hH:c.hs,corr=hm?hm.hH*VH:c.cob;return{hm,dias,hs,corr,cob:c.cob,ad,falta:corr-c.cob-ad,base:corr-c.cob-ad}}
+  const dias=hm?hm.dH:c.dias,hs=hm?hm.hH:c.hs,corr=hm?hm.hH*VH:c.dev;return{hm,dias,hs,corr,cob:c.cob,ad,falta:corr-c.cob-ad,base:corr-c.cob-ad}}
 function adelForm(id){const e=DB.empleados[id],o=e.local?'bol:'+e.local:'general';
   return `<tr class="sub" data-adf="${esc(id)}"><td colspan="7"><div class="row"><b>Adelanto a ${esc(e.nombre)}</b><input class="f money" data-am placeholder="Monto" inputmode="decimal" style="max-width:140px"><input type="date" class="f" data-af value="${hoyISO()}" style="max-width:160px"><select class="f" data-ao style="max-width:200px">${ACC_OPTS(o)}</select><input class="f" data-an placeholder="Nota (opcional)" style="max-width:200px"><button class="btn sm" data-aok>Guardar adelanto</button><button class="mini" data-ax>Cancelar</button><span class="note" data-amsg></span></div></td></tr>`}
 function renderSueldos(){
@@ -1583,7 +1602,7 @@ if(API&&CLAVE&&!QUIEN){verSetup(true);$('s-clave').value=CLAVE;$('s-msg').textCo
 else if(API&&CLAVE)conectar().then(r=>{if(r==='clave'){ls.del('caja_clave');verSetup(true);$('s-msg').textContent='La clave cambió. Escribí la clave nueva.'}});else{verSetup(true);$('status').textContent='Falta conectar con la planilla'}
 
 /* ======= versión de la app: botón Actualizar y aviso de versión nueva ======= */
-const APP_VER='2026-11-07b';
+const APP_VER='2026-11-09a';
 function actualizarApp(){const u=location.pathname+'?v='+Date.now()+location.hash;location.replace(u)}
 async function chequearVersion(){try{const r=await fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'});if(!r.ok)return;const t=await r.text();const m=t.match(/const APP_VER='([^']+)'/);
   if(m&&m[1]!==APP_VER){const b=document.getElementById('upd-banner');if(b)b.hidden=false}}catch(e){}}
