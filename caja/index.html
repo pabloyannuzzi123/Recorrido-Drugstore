@@ -86,6 +86,12 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .partes .parte{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 32px;gap:6px;align-items:center;max-width:520px}
 #pp-multi{margin:8px 0;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 #pp-partes{display:flex;flex-direction:column;gap:6px;width:100%}
+.fplist{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+.fpitem{display:grid;grid-template-columns:24px minmax(0,1.4fr) minmax(0,1.6fr) auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.fpitem input{width:18px;height:18px}.fpitem.ok{background:var(--accent-soft);border-color:var(--accent)}
+.tmo{font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap}
+.bl-t td,.bl-t th{text-align:right;white-space:nowrap}.bl-t td:first-child,.bl-t th:first-child{text-align:left}
+.bl-t td .g{display:block;font-weight:600}.bl-t td .a{display:block;font-size:11px;color:var(--muted)}.bl-t tr.click{cursor:pointer}.bl-t tr.click:hover{background:var(--bg)}
 .multi{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:10px}
 .multi .mh{display:grid;grid-template-columns:100px 1fr 1.4fr 1.6fr 32px;gap:6px;align-items:center}
 .multi .partes{display:flex;flex-direction:column;gap:6px;margin-left:106px}
@@ -195,6 +201,7 @@ tr.sub td{color:var(--muted);font-size:13px}
     <div class="tabs" role="tablist" id="tabs">
       <button class="tab" data-v="dia" role="tab" aria-selected="true">Cargar día</button>
       <button class="tab" data-v="cajas" role="tab" aria-selected="false">Cajas</button>
+      <button class="tab" data-v="bol" role="tab" aria-selected="false">Bolsines</button>
       <button class="tab" data-v="fijos" role="tab" aria-selected="false">Gastos fijos</button>
       <button class="tab" data-v="prov" role="tab" aria-selected="false">Proveedores</button>
       <button class="tab" data-v="che" role="tab" aria-selected="false">Cheques</button>
@@ -248,18 +255,34 @@ tr.sub td{color:var(--muted);font-size:13px}
   </section>
 
   <section class="box">
-    <h2>2 · Sueldos del día <small id="vh-label"></small></h2>
+    <h2>2 · Quién trabajó y cuánto cobra <small id="vh-label"></small></h2>
     <p class="aviso" id="su-hor" hidden style="background:var(--info-soft);color:var(--info)"></p>
-    <p class="note">Las horas del local salen del horario. <b>A guardar</b> es el sueldo de todo el día (fijos y franqueros): no se descuenta solo. Cuando lo guarden en el bolsín, cargá el monto en <b>Guardado</b> y recién ahí baja del cajón. Si un franquero no cobra hoy y prefiere acumular, destildá "cobró": le queda para cobrar en Empleados.</p>
+    <p class="note">Las horas salen del horario. Si un franquero cubrió un turno, elegilo. Abajo de cada turno ves cuánto cobra ese turno hoy.</p>
     <div class="scroll"><table>
-      <thead><tr><th>Local</th><th class="num">Horas local</th><th>Franquero mañana · hs</th><th>Franquero tarde · hs</th><th>Franquero noche · hs</th><th class="num">Franqueros</th><th class="num">A guardar</th><th class="num">Guardado en bolsín</th></tr></thead>
+      <thead><tr><th>Local</th><th class="num">Horas local</th><th>Mañana</th><th>Tarde</th><th>Noche</th><th class="num">Sueldo del día</th></tr></thead>
       <tbody id="su-body"></tbody>
-      <tfoot><tr><td>Total</td><td class="num" id="t-hs"></td><td class="num" id="t-hf"></td><td></td><td></td><td class="num" id="t-fr"></td><td class="num" id="t-bol"></td><td class="num" id="t-guard"></td></tr></tfoot>
+      <tfoot><tr><td>Total</td><td class="num" id="t-hs"></td><td colspan="3" class="note" id="t-hf"></td><td class="num" id="t-bol"></td></tr></tfoot>
     </table></div>
   </section>
 
   <section class="box">
-    <h2>3 · Pagos y pases entre cajas <small id="movs-count"></small></h2>
+    <h2>3 · Bolsines: cuánto guardar <small>no se descuenta solo: baja del cajón cuando cargás lo que guardaron</small></h2>
+    <p class="note" id="bol-viejo" hidden>Este día se cargó antes del cambio: lo de los bolsines se apartó solo.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Local</th><th class="num">Sueldo de hoy</th><th class="num">Pendiente de días anteriores</th><th class="num">Total a guardar</th><th class="num">Guardado hoy</th><th class="num">Falta</th></tr></thead>
+      <tbody id="bol-body"></tbody>
+      <tfoot><tr><td>Total</td><td class="num" id="tb-ag"></td><td class="num" id="tb-pa"></td><td class="num" id="tb-to"></td><td class="num" id="t-guard"></td><td class="num" id="tb-fa"></td></tr></tfoot>
+    </table></div>
+  </section>
+
+  <section class="box">
+    <h2>4 · Pago del día a franqueros <small>tildá a quién le pagaste hoy · sale del bolsín del local</small></h2>
+    <div class="fplist" id="fp-lista"></div>
+    <p class="note">Al que no tildes le queda acumulado: lo ves y lo pagás desde Empleados.</p>
+  </section>
+
+  <section class="box">
+    <h2>5 · Pagos y pases entre cajas <small id="movs-count"></small></h2>
     <div class="movs" id="movs"></div>
     <div class="row">
       <button class="btn" id="add-pago">+ Pago</button>
@@ -269,7 +292,7 @@ tr.sub td{color:var(--muted);font-size:13px}
   </section>
 
   <section class="box">
-    <h2>4 · Arqueo <small>contá la plata y escribí lo que hay; la diferencia queda registrada</small></h2>
+    <h2>6 · Arqueo <small>contá la plata y escribí lo que hay; la diferencia queda registrada</small></h2>
     <p class="note">Solo completá las cajas que contaste. Si falta o sobra, el saldo se ajusta a lo contado y la diferencia aparece en el resultado del local.</p>
     <div class="scroll"><table>
       <thead><tr><th>Caja</th><th class="num">Según la app</th><th class="num">Contado</th><th class="num">Diferencia</th></tr></thead>
@@ -279,7 +302,7 @@ tr.sub td{color:var(--muted);font-size:13px}
   </section>
 
   <section class="box">
-    <h2>5 · Cierre del día</h2>
+    <h2>7 · Cierre del día</h2>
     <div class="summary">
       <div class="cell hero"><span class="k">Resultado del día</span><span class="v" id="r-res"></span><span class="s">recaudado − sueldos − pagos</span></div>
       <div class="cell"><span class="k">Efectivo en cajones</span><span class="v" id="r-caj"></span><span class="s">saldo al cierre, 9 locales</span></div>
@@ -332,6 +355,19 @@ tr.sub td{color:var(--muted);font-size:13px}
     <p class="note">El dinero externo suma a la caja pero no cuenta como venta en el Resultado del mes.</p>
     <div class="scroll"><table><tbody id="ki-lista"></tbody></table></div>
   </section>
+  <section class="box" id="k-gas-box" hidden>
+    <h2 id="k-gas-t">Registrar un gasto</h2>
+    <div class="grid4">
+      <label>Fecha<input type="date" class="f" id="kg-fecha"></label>
+      <label>Categoría<select class="f" id="kg-cat"></select></label>
+      <label>Monto<input class="f money" id="kg-monto" inputmode="decimal" placeholder="0"></label>
+      <label>Es gasto de<select class="f" id="kg-local"></select></label>
+      <label class="w2">Detalle<input class="f" id="kg-det" placeholder="Ej.: vidriería, cerrajero, arreglo heladera"></label>
+    </div>
+    <div class="row"><button class="btn primary" id="kg-ok">Registrar gasto</button><span class="note" id="kg-msg"></span></div>
+    <p class="note">Para pagos a proveedores con cuenta usá la pestaña Proveedores, así se descuenta de lo que se les debe.</p>
+    <div class="scroll"><table><tbody id="kg-lista"></tbody></table></div>
+  </section>
   <section class="box" id="k-det-box" hidden>
     <h2><span id="k-det-t"></span> <small id="k-det-s"></small></h2>
     <div class="scroll"><table>
@@ -371,6 +407,34 @@ tr.sub td{color:var(--muted);font-size:13px}
 </main>
 
 <!-- ============ GASTOS FIJOS ============ -->
+<main id="view-bol" hidden>
+  <section class="box">
+    <h2>Bolsines: guardado por día
+      <span class="row"><button class="iconbtn" id="bl-prev" aria-label="Mes anterior">‹</button><b id="bl-mes" style="text-transform:none;letter-spacing:0;color:var(--ink)"></b><button class="iconbtn" id="bl-next" aria-label="Mes siguiente">›</button></span>
+    </h2>
+    <div class="summary" id="bl-res"></div>
+    <p class="note">En cada día: lo guardado sobre lo que había que guardar (sueldo de fijos y franqueros de ese día). En rojo, lo que faltó. Tocá un día para abrirlo en "Cargar día".</p>
+    <div class="scroll"><table class="bl-t">
+      <thead id="bl-head"></thead><tbody id="bl-body"></tbody><tfoot id="bl-foot"></tfoot>
+    </table></div>
+  </section>
+  <section class="box">
+    <h2>Cuánto cobra cada turno <small id="bl-vh"></small></h2>
+    <p class="note">Valor de un turno completo según el día y el local. Sirve para pagarle a un franquero.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Locales</th><th>Días</th><th class="num">Mañana</th><th class="num">Tarde</th><th class="num">Noche</th><th class="num">Día completo</th></tr></thead>
+      <tbody id="tv-body"></tbody>
+    </table></div>
+  </section>
+  <section class="box">
+    <h2>Franqueros: lo que acumularon sin cobrar <small id="bl-fr-mes"></small></h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Franquero</th><th class="num">Días sin cobrar</th><th class="num">Monto</th><th>Dónde</th></tr></thead>
+      <tbody id="bl-fr"></tbody>
+    </table></div>
+    <p class="note">Se pagan desde Empleados con "Marcar pagado".</p>
+  </section>
+</main>
 <main id="view-fijos" hidden>
   <section class="box">
     <h2>Gastos fijos de <span id="f-mes-t"></span>
@@ -390,6 +454,7 @@ tr.sub td{color:var(--muted);font-size:13px}
       <label>Categoría<select class="f" id="fx-cat"></select></label>
       <label>De qué local<select class="f" id="fx-local"></select></label>
       <label>Monto<input class="f money" id="fx-monto" inputmode="decimal" placeholder="0"></label>
+      <label id="fx-rige-l" hidden>El monto nuevo rige desde<input type="month" class="f" id="fx-rige"></label>
       <label>Cómo se paga<select class="f" id="fx-medio"><option>Débito automático</option><option>Transferencia</option><option>Efectivo</option></select></label>
       <label>Sale de<select class="f" id="fx-origen"></select></label>
       <label>Día de vencimiento<input class="f" id="fx-dia" inputmode="numeric" placeholder="10"></label>
@@ -540,6 +605,7 @@ tr.sub td{color:var(--muted);font-size:13px}
     <h2>Fijos · sueldo mensual
       <span class="row"><button class="iconbtn" id="em-prev" aria-label="Mes anterior">‹</button><b id="em-mes" style="text-transform:none;letter-spacing:0;color:var(--ink)"></b><button class="iconbtn" id="em-next" aria-label="Mes siguiente">›</button><button class="btn sm" id="em-print">Imprimir planilla de sueldos</button></span>
     </h2>
+    <p class="aviso" id="em-pago" style="background:var(--info-soft);color:var(--info)"></p>
     <div class="scroll"><table>
       <thead><tr><th>Empleado</th><th>Jornada</th><th class="num">Trabajó</th><th class="num">Sueldo</th><th class="num">Presentismo</th><th class="num">Adelantos</th><th class="num">A cobrar</th><th></th></tr></thead>
       <tbody id="ef-lista"></tbody><tfoot id="ef-tot"></tfoot>
@@ -772,14 +838,16 @@ function normDia(d){
   LOCALES.forEach(l=>{if(!d.fq[l.id]&&(d.frq[l.id]||d.frq2[l.id]||d.horasFr[l.id])){d.fq[l.id]={m:d.frq[l.id]||''};d.fh[l.id]={m:d.hf1[l.id]??d.horasFr[l.id]??0};if(d.frq2[l.id]||d.hf2[l.id]){d.fq[l.id].t=d.frq2[l.id]||'';d.fh[l.id].t=d.hf2[l.id]||0}}});
   if(!d.movs){d.movs=(d.pagos||[]).map(p=>({id:uid('m'),clase:'pago',origen:p.medio==='Virtual'?'banco':'general',destino:'',cat:p.tipo==='Gasto general'?'Gasto general':p.tipo,local:p.local||'',detalle:p.detalle||'',monto:p.monto||0}))}
   delete d.pagos;return d}
-function blank(f){return{bolModo:2,guard:{},fpag:{},fecha:f,mes:f.slice(0,7),rec:{},recT:{},horas:{},horasFr:{},frq:{},frq2:{},hf1:{},hf2:{},fq:{},fh:{},movs:[],arq:{},nota:''}}
+function blank(f){return{bolModo:3,guard:{},fpag:{},fecha:f,mes:f.slice(0,7),rec:{},recT:{},horas:{},horasFr:{},frq:{},frq2:{},hf1:{},hf2:{},fq:{},fh:{},movs:[],arq:{},nota:''}}
 
 /* sueldos del día de un local. Modo 2: no se descuenta solo; baja del cajón lo que se carga como guardado,
    y los franqueros que cobran ese día cobran del bolsín. Modo 1 (días viejos): se apartaba solo. */
-function sueLoc(d,l){const vh=d.vh||VH,hs=d.horas[l.id]??horasDefault(l.g,d.fecha),hf=Math.min(d.horasFr[l.id]||0,hs),m2=d.bolModo===2;
-  let frPag=0,frAcu=0;Object.entries(d.fq[l.id]||{}).forEach(([t,e])=>{const x=((d.fh[l.id]||{})[t]||0)*vh;if(!x)return;if(m2&&((d.fpag||{})[l.id]||{})[t]===false)frAcu+=x;else frPag+=x});
+/* ¿se le pagó el día al franquero? modo 3: solo si se tildó; modo 2: salvo que se destildó; días viejos: siempre */
+function frPagado(d,L,t){const v=((d.fpag||{})[L]||{})[t];if(v!==undefined)return v;return d.bolModo===3?false:true}
+function sueLoc(d,l){const vh=d.vh||VH,hs=d.horas[l.id]??horasDefault(l.g,d.fecha),hf=Math.min(d.horasFr[l.id]||0,hs),m2=d.bolModo>=2;
+  let frPag=0,frAcu=0;Object.entries(d.fq[l.id]||{}).forEach(([t,e])=>{const x=((d.fh[l.id]||{})[t]||0)*vh;if(!x)return;if(m2&&!frPagado(d,l.id,t))frAcu+=x;else frPag+=x});
   return{vh,hs,hf,m2,fr:hf*vh,bol:(hs-hf)*vh,aG:hs*vh,guard:m2?((d.guard||{})[l.id]||0):(hs-hf)*vh,frPag,frAcu}}
-function pendGuardar(L,hasta){let p=0;Object.values(DB.dias).forEach(d0=>{if(d0.fecha>=hasta||d0.bolModo!==2)return;const d=normDia(d0),x=sueLoc(d,LOCALES.find(l=>l.id===L));p+=x.aG-x.guard});return Math.round(p)}
+function pendGuardar(L,hasta){let p=0;Object.values(DB.dias).forEach(d0=>{if(d0.fecha>=hasta||!(d0.bolModo>=2))return;const d=normDia(d0),x=sueLoc(d,LOCALES.find(l=>l.id===L));p+=x.aG-x.guard});return Math.round(p)}
 /* calcula lo que hace un día en cada caja */
 function diaCalc(d){
   const vh=d.vh||VH;const r={ef:0,vi:0,hs:0,hf:0,fr:0,bol:0,pagos:0,pases:0,porLoc:{},acc:{},cats:{}};
@@ -805,11 +873,13 @@ function diaCalc(d){
 function fijoVence(f,m){if(f.activo===false&&(!f.hasta||m>f.hasta))return null;if(f.desde&&m<f.desde)return null;
   let n=null;if(f.cuotas){n=mesDiff(f.inicio,m)+1;if(n<1||n>f.cuotas)return null}
   return{fecha:m+'-'+String(Math.min(f.dia||1,lastDay(m))).padStart(2,'0'),cuota:n}}
+/* monto de un fijo en un mes: si aumentó, cada mes conserva el valor que tenía */
+function montoMes(f,m){const H=(f.hist||[]).filter(x=>x.desde<=m).sort((a,b)=>a.desde.localeCompare(b.desde));return H.length?H[H.length-1].monto:(f.hist&&f.hist.length?f.hist.slice().sort((a,b)=>a.desde.localeCompare(b.desde))[0].monto:f.monto)}
 function fijoEstado(f,m){const v=fijoVence(f,m);if(!v)return null;const pf=DB.pagosfijos[f.id+'_'+m];const hoy=hoyISO();
   if(pf)return{...v,est:'pagado',pago:pf,monto:pf.monto,fechaPago:pf.fecha,origen:pf.origen};
-  if(f.medio==='Débito automático'&&v.fecha<=hoy)return{...v,est:'debitado',monto:f.monto,fechaPago:v.fecha,origen:f.origen||'banco'};
+  if(f.medio==='Débito automático'&&v.fecha<=hoy)return{...v,est:'debitado',monto:montoMes(f,m),fechaPago:v.fecha,origen:f.origen||'banco'};
   const dias=Math.round((toDate(v.fecha)-toDate(hoy))/864e5);
-  return{...v,est:dias<0?'vencido':'pendiente',dias,monto:f.monto,origen:f.origen}}
+  return{...v,est:dias<0?'vencido':'pendiente',dias,monto:montoMes(f,m),origen:f.origen}}
 
 /* libro mayor: todos los movimientos de todas las cajas */
 function ledger(){
@@ -834,6 +904,7 @@ function ledger(){
   Object.values(DB.provmovs).forEach(m=>{if(m.tipo==='pago'&&m.medio!=='Cheque'&&m.fecha>=ini)E.push({f:m.fecha,a:m.origen||'general',m:-m.monto,t:'Pago a '+provName(m.prov)+(m.detalle?' · '+m.detalle:''),o:4})});
   Object.values(DB.adelantos).forEach(x=>{if(x.fecha>=ini)E.push({f:x.fecha,a:x.origen||'general',m:-x.monto,t:(x.tipo==='sueldo'?'Sueldo '+mesT(x.mes)+' ':'Adelanto ')+empN(x.emp),o:4})});
   Object.values(DB.movcaja||{}).forEach(x=>{if(x.fecha<ini)return;const det=x.detalle?' · '+x.detalle:'';
+    if(x.tipo==='gasto'){E.push({f:x.fecha,a:x.origen,m:-x.monto,t:x.cat+det,o:3});return}
     if(x.tipo==='pase')E.push({f:x.fecha,a:x.origen,m:-x.monto,t:'Pase a '+accN(x.destino)+det,o:3});
     E.push({f:x.fecha,a:x.destino,m:x.monto,t:(x.tipo==='pase'?'Ingreso desde '+accN(x.origen):'Ingreso externo · '+x.cat)+det,o:3})});
   (DB.ajustes||[]).forEach(x=>{if(x.f>=ini&&x.m)E.push({f:x.f,a:x.a,m:x.m,t:'Movimiento de la caja del dueño',o:7})});
@@ -843,20 +914,24 @@ function saldos(hasta){const s={};ACC.forEach(a=>s[a.id]=0);ledger().forEach(e=>
 /* ================= CARGAR DÍA ================= */
 let state=blank(hoyISO()),saved=null,dirty=false,LAST_SALDOS={};
 function buildDay(){
-  const rb=$('rec-body');rb.innerHTML='';const sb=$('su-body');sb.innerHTML='';
+  const rb=$('rec-body');rb.innerHTML='';const sb=$('su-body');sb.innerHTML='';$('bol-body').innerHTML='';$('bol-viejo').hidden=state.bolModo>=2;
   LOCALES.forEach(l=>{['m','t','n'].forEach((t,k)=>{const x=(state.recT[l.id]||{})[t]||{};
       const tr=document.createElement('tr');if(!k)tr.className='first';
       tr.innerHTML=(k?'':`<td class="loc" rowspan="3">${l.n}</td>`)+`<td class="tn">${TNM[t]}</td><td><input class="f money" id="ef-${l.id}-${t}" inputmode="decimal" placeholder="0" aria-label="Efectivo ${l.n} ${TNM[t]}"><span class="inf" id="ie-${l.id}-${t}"></span></td><td><input class="f money" id="vi-${l.id}-${t}" inputmode="decimal" placeholder="0" aria-label="Virtual ${l.n} ${TNM[t]}"><span class="inf" id="iv-${l.id}-${t}"></span></td>`+(k?'':`<td class="num" rowspan="3" id="to-${l.id}"></td>`);
       rb.appendChild(tr);tr.querySelector(`#ef-${l.id}-${t}`).value=fmtIn(x.ef);tr.querySelector(`#vi-${l.id}-${t}`).value=fmtIn(x.vi)});
     const hs=state.horas[l.id]??horasDefault(l.g,state.fecha);
     const ts=document.createElement('tr');
-    ts.innerHTML=`<td class="loc">${l.n}</td><td class="num"><input class="f hrs" id="hs-${l.id}" inputmode="decimal"></td>`+['m','t','n'].map(t=>`<td><span class="row" style="flex-wrap:nowrap"><select class="f" id="fq-${l.id}-${t}" style="min-width:104px" aria-label="Franquero ${t}">${FRQ_OPTS((state.fq[l.id]||{})[t])}</select><input class="f hrs" id="fh-${l.id}-${t}" inputmode="decimal" placeholder="0" style="max-width:62px" aria-label="Horas"></span>${state.bolModo===2?`<label class="note fpl" id="fpl-${l.id}-${t}" style="display:flex;gap:4px;align-items:center;margin-top:3px"><input type="checkbox" id="fp-${l.id}-${t}"${((state.fpag[l.id]||{})[t])===false?'':' checked'}> cobró hoy</label>`:''}</td>`).join('')+`<td class="num" id="fr-${l.id}"></td><td class="num" id="bo-${l.id}"></td><td class="num">${state.bolModo===2?`<span class="row" style="flex-wrap:nowrap;justify-content:flex-end"><input class="f money" id="gu-${l.id}" inputmode="decimal" placeholder="0" style="max-width:120px" aria-label="Guardado en bolsín ${l.n}"><button type="button" class="mini" data-gtodo="${l.id}" title="Poner todo lo que hay que guardar">Todo</button></span><div class="note" id="gp-${l.id}"></div>`:'<span class="note">automático<br>(día cargado antes)</span>'}</td>`;
-    sb.appendChild(ts);ts.querySelector('#hs-'+l.id).value=String(hs).replace('.',',');if(state.bolModo===2){const g=state.guard[l.id];ts.querySelector('#gu-'+l.id).value=g?fmtIn(g):''}['m','t','n'].forEach(t=>{const h=(state.fh[l.id]||{})[t];ts.querySelector(`#fh-${l.id}-${t}`).value=h?String(h).replace('.',','):'';
+    ts.innerHTML=`<td class="loc">${l.n}</td><td class="num"><input class="f hrs" id="hs-${l.id}" inputmode="decimal"></td>`+['m','t','n'].map(t=>`<td><span class="row" style="flex-wrap:nowrap"><select class="f" id="fq-${l.id}-${t}" style="min-width:104px" aria-label="Franquero ${t}">${FRQ_OPTS((state.fq[l.id]||{})[t])}</select><input class="f hrs" id="fh-${l.id}-${t}" inputmode="decimal" placeholder="0" style="max-width:62px" aria-label="Horas"></span><div class="tmo" id="mo-${l.id}-${t}"></div></td>`).join('')+`<td class="num" id="bo-${l.id}"></td>`;
+    const bt=document.createElement('tr');
+    bt.innerHTML=`<td class="loc">${l.n}</td><td class="num" id="ba-${l.id}"></td><td class="num" id="bp-${l.id}"></td><td class="num" id="bt-${l.id}"></td><td class="num">${state.bolModo>=2?`<span class="row" style="flex-wrap:nowrap;justify-content:flex-end"><input class="f money" id="gu-${l.id}" inputmode="decimal" placeholder="0" style="max-width:130px" aria-label="Guardado en bolsín ${l.n}"><button type="button" class="mini" data-gtodo="${l.id}" title="Poner todo lo que hay que guardar">Todo</button></span>`:'<span class="note">automático</span>'}</td><td class="num" id="bf-${l.id}"></td>`;
+    $('bol-body').appendChild(bt);if(state.bolModo>=2){const g=state.guard[l.id];bt.querySelector('#gu-'+l.id).value=g?fmtIn(g):''}
+    sb.appendChild(ts);ts.querySelector('#hs-'+l.id).value=String(hs).replace('.',',');['m','t','n'].forEach(t=>{const h=(state.fh[l.id]||{})[t];ts.querySelector(`#fh-${l.id}-${t}`).value=h?String(h).replace('.',','):'';
       ts.querySelector(`#fq-${l.id}-${t}`).addEventListener('change',e=>{const hi=ts.querySelector(`#fh-${l.id}-${t}`);if(e.target.value&&!parse(hi.value))hi.value=String(hTurno(l.id,t,state.fecha)).replace('.',',');if(!e.target.value)hi.value='';readDay()})})});
   rb.querySelectorAll('input').forEach(i=>{i.addEventListener('input',readDay);i.addEventListener('blur',()=>{i.value=fmtIn(parse(i.value))})});
-  sb.querySelectorAll('input,select').forEach(i=>i.addEventListener(i.type==='checkbox'?'change':'input',readDay));
-  sb.querySelectorAll('[id^=gu-]').forEach(i=>i.addEventListener('blur',()=>{i.value=i.value.trim()?fmtIn(parse(i.value)):''}));
-  sb.querySelectorAll('[data-gtodo]').forEach(b=>b.onclick=()=>{const L=b.dataset.gtodo,l=LOCALES.find(x=>x.id===L),S=sueLoc(state,l),p=Math.max(0,pendGuardar(L,state.fecha));$('gu-'+L).value=fmtIn(Math.round(S.aG+p));readDay()});
+  sb.querySelectorAll('input,select').forEach(i=>i.addEventListener('input',readDay));
+  const bb=$('bol-body');bb.querySelectorAll('input').forEach(i=>i.addEventListener('input',readDay));
+  bb.querySelectorAll('[id^=gu-]').forEach(i=>i.addEventListener('blur',()=>{i.value=i.value.trim()?fmtIn(parse(i.value)):''}));
+  bb.querySelectorAll('[data-gtodo]').forEach(b=>b.onclick=()=>{const L=b.dataset.gtodo,l=LOCALES.find(x=>x.id===L),S=sueLoc(state,l),p=Math.max(0,pendGuardar(L,state.fecha));$('gu-'+L).value=fmtIn(Math.round(S.aG+p));readDay()});
   const ab=$('arq-body');ab.innerHTML='';
   ACC.filter(a=>a.id!=='banco').forEach(a=>{const tr=document.createElement('tr');const x=state.arq[a.id];
     tr.innerHTML=`<td class="loc">${esc(a.n)}</td><td class="num" id="as-${a.id.replace(':','-')}"></td><td class="num"><input class="f money" data-arq="${a.id}" inputmode="decimal" placeholder="—" style="max-width:150px"></td><td class="num" id="ad-${a.id.replace(':','-')}"></td>`;
@@ -907,9 +982,17 @@ function buildMulti(g){
   box.querySelector('[data-gdel]').onclick=()=>{const b=box.querySelector('[data-gdel]');if(b.dataset.ok!=='1'&&tot()){b.dataset.ok='1';b.textContent='¿?';b.title='Tocá de nuevo para quitar todo el pago';return}
     state.movs=state.movs.filter(m=>m.grp!==g);buildMovs();markDirty();calc()};
   return box}
+function renderFP(r){const box=$('fp-lista'),L=[];
+  LOCALES.forEach(l=>['m','t','n'].forEach(t=>{const e=(state.fq[l.id]||{})[t],hF=((state.fh[l.id]||{})[t])||0;if(e&&hF)L.push({l,t,e,hF,m:hF*(state.vh||VH)})}));
+  if(!L.length){box.innerHTML='<p class="empty">Hoy no hay franqueros cargados en el paso 2.</p>';return}
+  if(state.bolModo<2){box.innerHTML=L.map(x=>`<div class="fpitem ok"><span>✓</span><b>${esc(empN(x.e))}</b><span>${esc(x.l.n)} · ${TNM[x.t]} · ${String(x.hF).replace('.',',')} hs</span><b>${fmt(x.m)}</b></div>`).join('')+'<p class="note">Día cargado antes del cambio: se les pagó del cajón.</p>';return}
+  let tp=0;box.innerHTML=L.map(x=>{const ok=frPagado(state,x.l.id,x.t);if(ok)tp+=x.m;
+    return `<label class="fpitem${ok?' ok':''}"><input type="checkbox" data-fp="${x.l.id}|${x.t}"${ok?' checked':''}><b>${esc(empN(x.e))}</b><span>${esc(x.l.n)} · ${TNM[x.t]} · ${String(x.hF).replace('.',',')} hs</span><b>${fmt(x.m)}</b></label>`}).join('')+
+    `<p class="note">Pagado hoy: <b>${fmt(tp)}</b> de ${fmt(L.reduce((a,x)=>a+x.m,0))}</p>`;
+  box.querySelectorAll('[data-fp]').forEach(c=>c.onchange=()=>{const[Lid,t]=c.dataset.fp.split('|');(state.fpag[Lid]||(state.fpag[Lid]={}))[t]=c.checked;markDirty();calc()})}
 function readDay(){LOCALES.forEach(l=>{state.recT[l.id]={};let ef=0,vi=0;['m','t','n'].forEach(t=>{const a=parse($(`ef-${l.id}-${t}`).value),b=parse($(`vi-${l.id}-${t}`).value);if(a||b)state.recT[l.id][t]={ef:a,vi:b};ef+=a;vi+=b});state.rec[l.id]={ef,vi};
   state.horas[l.id]=parse($('hs-'+l.id).value);state.fq[l.id]={};state.fh[l.id]={};let tot=0;['m','t','n'].forEach(t=>{const e=$(`fq-${l.id}-${t}`).value,h=parse($(`fh-${l.id}-${t}`).value);if(e||h){state.fq[l.id][t]=e;state.fh[l.id][t]=h;tot+=h}});state.horasFr[l.id]=tot;
-  if(state.bolModo===2){state.fpag[l.id]={};['m','t','n'].forEach(t=>{const c=$(`fp-${l.id}-${t}`),lb=$(`fpl-${l.id}-${t}`);if(lb)lb.style.visibility=state.fq[l.id][t]?'visible':'hidden';if(c&&!c.checked&&state.fq[l.id][t])state.fpag[l.id][t]=false});
+  if(state.bolModo>=2){const fp=state.fpag[l.id]||{};Object.keys(fp).forEach(t=>{if(!state.fq[l.id][t])delete fp[t]});state.fpag[l.id]=fp;
     const g=$('gu-'+l.id);if(g&&g.value.trim())state.guard[l.id]=parse(g.value);else delete state.guard[l.id]}});
   const arq={};document.querySelectorAll('[data-arq]').forEach(i=>{if(i.value.trim()!=='')arq[i.dataset.arq]={contado:parse(i.value)}});state.arq=arq;
   state.nota=$('nota').value;markDirty();calc()}
@@ -920,15 +1003,20 @@ function calc(){
     const cg=c.ef,se=Math.round(x.ef||0)===Math.round(cg),sv=Math.round(x.vi||0)===Math.round(c.vi),q=c.quien?' · '+c.quien:'';
     ie.className='inf '+(se?'ok':'dif');ie.innerHTML=se?'✓ informado'+esc(q):`<button type="button" class="inf-b" data-use="ef|${l.id}|${t}" title="Copiar">↓ ${fmt(cg)}</button>`;
     iv.className='inf '+(sv?'ok':'dif');iv.innerHTML=sv?'✓':`<button type="button" class="inf-b" data-use="vi|${l.id}|${t}" title="Copiar">↓ ${fmt(c.vi)}</button>`}));
+  const tb={ag:0,pa:0,to:0,fa:0};
   LOCALES.forEach(l=>{const x=state.rec[l.id]||{};$('to-'+l.id).textContent=fmt((x.ef||0)+(x.vi||0));
-    ['m','t','n'].forEach(t=>{const lb=$(`fpl-${l.id}-${t}`);if(lb)lb.style.visibility=(state.fq[l.id]||{})[t]?'visible':'hidden'});
-    const p=r.porLoc[l.id],S=p.S;$('fr-'+l.id).innerHTML=p.fr?fmt(p.fr)+(S.frAcu?`<div class="note">acumula ${fmt(S.frAcu)}</div>`:''):'—';
-    $('bo-'+l.id).textContent=fmt(S.m2?S.aG:p.bol);
-    const gp=$('gp-'+l.id);if(gp){const pa=pendGuardar(l.id,state.fecha),falta=Math.round(S.aG+pa-S.guard);
-      gp.innerHTML=(pa>0?`de días anteriores ${fmt(pa)}<br>`:'')+(falta>0?`<span class="neg">falta guardar ${fmt(falta)}</span>`:falta<0?`guardó ${fmt(-falta)} de más`:S.guard?'✓ guardado':'')}});
+    const p=r.porLoc[l.id],S=p.S;
+    ['m','t','n'].forEach(t=>{const e=(state.fq[l.id]||{})[t],hF=((state.fh[l.id]||{})[t])||0,hT=hTurno(l.id,t,state.fecha),mo=$(`mo-${l.id}-${t}`);if(!mo)return;
+      mo.textContent=e&&hF?`${empN(e)} cobra ${fmt(hF*S.vh)}`:`turno ${String(hT).replace('.',',')} hs · ${fmt(hT*S.vh)}`});
+    $('bo-'+l.id).textContent=fmt(S.aG);
+    const pa=S.m2?pendGuardar(l.id,state.fecha):0,tot=S.aG+pa,fa=S.m2?Math.round(tot-S.guard):0;tb.ag+=S.aG;tb.pa+=pa;tb.to+=tot;tb.fa+=S.m2?Math.max(0,tot-S.guard):0;
+    $('ba-'+l.id).textContent=fmt(S.aG);$('bp-'+l.id).textContent=pa?fmt(pa):'—';$('bt-'+l.id).textContent=fmt(S.m2?tot:S.bol);
+    $('bf-'+l.id).innerHTML=!S.m2?'':fa>0?`<span class="neg">${fmt(fa)}</span>`:fa<0?`<span class="note">guardó ${fmt(-fa)} de más</span>`:'<span class="dif-pos">✓</span>'});
+  $('tb-ag').textContent=fmt(tb.ag);$('tb-pa').textContent=fmt(tb.pa);$('tb-to').textContent=fmt(tb.to);$('tb-fa').innerHTML=tb.fa?`<span class="neg">${fmt(tb.fa)}</span>`:'✓';
+  renderFP(r);
   $('t-guard').textContent=fmt(r.guard||0);
   $('t-ef').textContent=fmt(r.ef);$('t-vi').textContent=fmt(r.vi);$('t-to').textContent=fmt(r.ef+r.vi);
-  $('t-hs').textContent=String(r.hs).replace('.',',')+' hs';$('t-hf').textContent=String(r.hf).replace('.',',')+' hs';$('t-fr').textContent=fmt(r.fr);$('t-bol').textContent=fmt(r.aG||0);
+  $('t-hs').textContent=String(r.hs).replace('.',',')+' hs';$('t-hf').textContent=r.hf?'franqueros: '+String(r.hf).replace('.',',')+' hs · '+fmt(r.fr):'';$('t-bol').textContent=fmt(r.aG||0);
   $('vh-label').textContent='hora a '+fmt(vh)+' · sin presentismo';
   $('r-res').textContent=fmt(r.res);$('r-res').classList.toggle('neg',r.res<0);
   // arqueo: saldo según la app sin las diferencias de este día
@@ -953,7 +1041,7 @@ function diaMovAcc(f,r){const a={...r.acc};const m=f.slice(0,7);
   Object.values(DB.cheques).forEach(c=>{if(c.cobrado&&(c.cobradoEl||c.cobro)===f)a.banco=(a.banco||0)-c.monto});
   Object.values(DB.provmovs).forEach(x=>{if(x.tipo==='pago'&&x.medio!=='Cheque'&&x.fecha===f){const o=x.origen||'general';a[o]=(a[o]||0)-x.monto}});
   Object.values(DB.adelantos).forEach(x=>{if(x.fecha===f){const o=x.origen||'general';a[o]=(a[o]||0)-x.monto}});
-  Object.values(DB.movcaja||{}).forEach(x=>{if(x.fecha!==f)return;if(x.tipo==='pase')a[x.origen]=(a[x.origen]||0)-x.monto;a[x.destino]=(a[x.destino]||0)+x.monto});
+  Object.values(DB.movcaja||{}).forEach(x=>{if(x.fecha!==f)return;if(x.tipo==='gasto'){a[x.origen]=(a[x.origen]||0)-x.monto;return}if(x.tipo==='pase')a[x.origen]=(a[x.origen]||0)-x.monto;a[x.destino]=(a[x.destino]||0)+x.monto});
   if(DUENO)(DB.ajustes||[]).forEach(x=>{if(x.f===f)a[x.a]=(a[x.a]||0)+x.m});return a}
 function renderFijosHoy(){
   const f=state.fecha,m=f.slice(0,7),items=[];
@@ -1031,10 +1119,10 @@ function fijoItem(x,e,m,ctx){
   const puede=e.est==='pendiente'||e.est==='vencido';
   return `<div class="item${e.est==='pagado'||e.est==='debitado'?' done':''}" data-fx="${esc(x.id)}">
     <span class="pill ${lbl[1]}">${lbl[0]}</span>
-    <div class="ci"><div><b>${esc(x.nombre)}</b>${e.cuota?' · cuota '+e.cuota+' de '+x.cuotas:''}</div><div class="cs">${esc(locN(x.local))} · ${esc(x.cat)} · ${esc(x.medio)} · sale de ${esc(accN(e.origen||x.origen))}</div></div>
+    <div class="ci"><div><b>${esc(x.nombre)}</b>${e.cuota?' · cuota '+e.cuota+' de '+x.cuotas:''}</div><div class="cs">${esc(locN(x.local))} · ${esc(x.cat)} · ${esc(x.medio)} · sale de ${esc(accN(e.origen||x.origen))}${(()=>{const H=(x.hist||[]).slice().sort((a,b)=>a.desde.localeCompare(b.desde)),i=H.findIndex(y=>y.desde===m);return i>0?` · <b>aumentó</b> (antes ${fmt(H[i-1].monto)})`:''})()}</div></div>
     <span class="cm">${fmt(e.monto)}</span>
     <span class="acc">${puede?'<button class="btn sm" data-pay>Pagar</button>':''}${e.est==='pagado'?'<button class="mini" data-undo>Deshacer</button>':''}${ctx==='lista'?' <button class="mini" data-edit>Editar</button>':''}</span>
-    ${puede?`<div class="payrow" hidden><select class="f" data-po aria-label="Sale de">${ACC_OPTS(x.origen||'banco')}</select><input class="f money" data-pm inputmode="decimal" value="${fmtIn(x.monto)}" aria-label="Monto"><input type="date" class="f" data-pf value="${ctx==='lista'?hoyISO():ctx}" aria-label="Fecha de pago"><button class="btn sm" data-ok>Confirmar pago</button></div>`:''}
+    ${puede?`<div class="payrow" hidden><select class="f" data-po aria-label="Sale de">${ACC_OPTS(x.origen||'banco')}</select><input class="f money" data-pm inputmode="decimal" value="${fmtIn(e.monto)}" aria-label="Monto"><input type="date" class="f" data-pf value="${ctx==='lista'?hoyISO():ctx}" aria-label="Fecha de pago"><button class="btn sm" data-ok>Confirmar pago</button></div>`:''}
   </div>`}
 function bindFijoItems(root,m,ctx){
   root.querySelectorAll('[data-fx]').forEach(it=>{const id=it.dataset.fx,x=DB.fijos[id];
@@ -1058,12 +1146,12 @@ function renderFijos(){
   bindFijoItems($('f-lista'),fMes,'lista');$('f-lista').querySelectorAll('[data-ed2]').forEach(b=>b.onclick=()=>editFijo(b.dataset.ed2))}
 function fxCuotaVis(){document.querySelectorAll('.cuota').forEach(e=>e.hidden=!$('fx-escuota').checked)}
 function fxOrigenDefault(){const md=$('fx-medio').value,L=$('fx-local').value;$('fx-origen').value=md==='Efectivo'?(L&&L!=='deposito'?'loc:'+L:'general'):'banco'}
-function fxLimpiar(){fxEdit=null;['fx-nombre','fx-monto','fx-dia','fx-cuotas'].forEach(i=>$(i).value='');$('fx-escuota').checked=false;$('fx-inicio').value=hoyISO().slice(0,7);
+function fxLimpiar(){fxEdit=null;$('fx-rige-l').hidden=true;delete $('fx-monto').dataset.orig;['fx-nombre','fx-monto','fx-dia','fx-cuotas'].forEach(i=>$(i).value='');$('fx-escuota').checked=false;$('fx-inicio').value=hoyISO().slice(0,7);
   $('fx-cat').value='Alquiler';$('fx-local').value='';$('fx-medio').value='Débito automático';fxOrigenDefault();fxCuotaVis();
   $('f-form-t').textContent='Agregar gasto fijo';$('fx-guardar').textContent='Agregar gasto fijo';$('fx-cancelar').hidden=true;
   $('fx-borrar')?.remove()}
 function editFijo(id){const x=DB.fijos[id];if(!x)return;fxEdit=id;
-  $('fx-nombre').value=x.nombre;$('fx-cat').value=x.cat;$('fx-local').value=x.local||'';$('fx-monto').value=fmtIn(x.monto);$('fx-medio').value=x.medio;$('fx-origen').value=x.origen||'banco';
+  $('fx-nombre').value=x.nombre;$('fx-cat').value=x.cat;$('fx-local').value=x.local||'';$('fx-monto').value=fmtIn(montoMes(x,fMes));$('fx-monto').dataset.orig=montoMes(x,fMes);$('fx-rige').value=fMes;$('fx-rige-l').hidden=true;$('fx-medio').value=x.medio;$('fx-origen').value=x.origen||'banco';
   $('fx-dia').value=x.dia||'';$('fx-escuota').checked=!!x.cuotas;$('fx-cuotas').value=x.cuotas||'';$('fx-inicio').value=x.inicio||hoyISO().slice(0,7);fxCuotaVis();
   $('f-form-t').textContent='Editar gasto fijo';$('fx-guardar').textContent='Guardar cambios';$('fx-cancelar').hidden=false;
   if(!$('fx-borrar')){const b=document.createElement('button');b.className='btn';b.id='fx-borrar';b.textContent=x.activo===false?'Reactivar':'Dar de baja';$('fx-cancelar').after(b);
@@ -1075,8 +1163,11 @@ $('fx-guardar').onclick=async()=>{
   if(!nombre||!monto||!(dia>=1&&dia<=31)){$('fx-msg').textContent='Completá concepto, monto y día de vencimiento (1 a 31).';return}
   const esC=$('fx-escuota').checked,cuotas=esC?parseInt($('fx-cuotas').value,10):0;
   if(esC&&!(cuotas>0)){$('fx-msg').textContent='Poné la cantidad de cuotas.';return}
-  const prev=fxEdit?DB.fijos[fxEdit]:null;
-  const x={id:fxEdit||uid('f'),nombre,cat:$('fx-cat').value,local:$('fx-local').value,localN:locN($('fx-local').value),monto,medio:$('fx-medio').value,origen:$('fx-origen').value,dia,
+  const prev=fxEdit?DB.fijos[fxEdit]:null;let hist=prev&&prev.hist?prev.hist.slice():null,montoAct=monto;
+  if(prev&&Math.round(monto)!==Math.round(parse(String($('fx-monto').dataset.orig||prev.monto)))){const r=$('fx-rige').value||fMes;
+    if(!hist)hist=[{desde:prev.desde&&prev.desde<r?prev.desde:'2000-01',monto:prev.monto}];hist=hist.filter(y=>y.desde<r);hist.push({desde:r,monto});
+    montoAct=montoMes({hist},hoyISO().slice(0,7))}
+  const x={id:fxEdit||uid('f'),nombre,cat:$('fx-cat').value,local:$('fx-local').value,localN:locN($('fx-local').value),monto:montoAct,...(hist?{hist}:{}),medio:$('fx-medio').value,origen:$('fx-origen').value,dia,
     cuotas:esC?cuotas:0,inicio:esC?$('fx-inicio').value:'',activo:prev?prev.activo!==false:true,desde:prev?prev.desde:hoyISO().slice(0,7)};
   if(!online){$('fx-msg').textContent='Sin conexión con la planilla.';return}
   $('fx-guardar').disabled=true;
@@ -1103,10 +1194,17 @@ function renderCajas(){
   const puedeIn=kSel==='general'||kSel==='banco';$('k-in-box').hidden=!puedeIn;
   if(puedeIn){$('k-in-t').textContent='Ingresar dinero a '+accN(kSel).toLowerCase().replace(/^caja/,'la caja').replace(/^banco/,'el banco');
     $('ki-origen').innerHTML=ACC_OPTS('loc:'+LOCALES[0].id).replace(new RegExp(`<option value="${kSel}"[^>]*>[^<]*</option>`),'');if(!$('ki-fecha').value)$('ki-fecha').value=hoyISO();
-    const L=Object.values(DB.movcaja||{}).filter(x=>x.destino===kSel||x.origen===kSel).sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,10);
+    const L=Object.values(DB.movcaja||{}).filter(x=>x.tipo!=='gasto'&&(x.destino===kSel||x.origen===kSel)).sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,10);
     $('ki-lista').innerHTML=L.map(x=>`<tr><td>${fCorta(x.fecha)}</td><td>${x.tipo==='pase'?(x.destino===kSel?'Desde '+esc(accN(x.origen)):'A '+esc(accN(x.destino))):'Externo · '+esc(x.cat)}${x.detalle?' · '+esc(x.detalle):''}</td><td class="num">${fmt(x.monto)}</td><td class="num"><button class="mini" data-kdel="${esc(x.id)}">Borrar</button></td></tr>`).join('');
     $('ki-lista').querySelectorAll('[data-kdel]').forEach(b=>b.onclick=async()=>{if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='¿Borrar? Tocá de nuevo';return}
       try{await del('movcaja',b.dataset.kdel);delete DB.movcaja[b.dataset.kdel];renderCajas()}catch(e){}})}
+  $('k-gas-box').hidden=!kSel;
+  if(kSel){$('k-gas-t').textContent='Registrar un gasto pagado con '+accN(kSel).replace(/^Caja/,'la caja').replace(/^Banco/,'el banco').replace(/^Cajón/,'el cajón').replace(/^Bolsín/,'el bolsín');
+    if($('kg-cat').dataset.acc!==kSel){$('kg-cat').dataset.acc=kSel;$('kg-cat').innerHTML=opts(CATS.filter(c=>!['Proveedor','Sueldo','Adelanto','Retiro'].includes(c)).map(c=>({v:c,n:c})),'Mantenimiento');$('kg-local').innerHTML=LOC_OPTS(accLocal(kSel));if(!$('kg-fecha').value)$('kg-fecha').value=hoyISO()}
+    const G=Object.values(DB.movcaja||{}).filter(x=>x.tipo==='gasto'&&x.origen===kSel).sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,10);
+    $('kg-lista').innerHTML=G.map(x=>`<tr><td>${fCorta(x.fecha)}</td><td>${esc(x.cat)}${x.detalle?' · '+esc(x.detalle):''}<div class="note">gasto de ${esc(x.local?locN(x.local):'General')}</div></td><td class="num">${fmt(x.monto)}</td><td class="num"><button class="mini" data-kgdel="${esc(x.id)}">Borrar</button></td></tr>`).join('');
+    $('kg-lista').querySelectorAll('[data-kgdel]').forEach(b=>b.onclick=async()=>{if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='¿Borrar? Tocá de nuevo';return}
+      try{await del('movcaja',b.dataset.kgdel);delete DB.movcaja[b.dataset.kgdel];renderCajas()}catch(e){}})}
   $('k-det-sh').hidden=!DUENO;
   if(kSel){let run=0;const rows=ledger().filter(e=>e.a===kSel).map(e=>{run+=e.m;return{...e,run}}).filter(e=>DUENO||e.o!==7);
     $('k-det-t').textContent=accN(kSel);$('k-det-s').textContent=rows.length+' movimientos · últimos 40';
@@ -1135,6 +1233,14 @@ $('ki-ok').onclick=async()=>{const m=parse($('ki-monto').value);if(!m){$('ki-msg
   if(t==='pase'){x.origen=$('ki-origen').value;x.origenN=accN(x.origen)}else x.cat=$('ki-cat').value;
   $('ki-ok').disabled=true;try{await put('movcaja',x.id,x);DB.movcaja[x.id]=x;$('ki-monto').value='';$('ki-det').value='';$('ki-msg').textContent='Ingresado.';renderCajas()}
   catch(e){$('ki-msg').textContent='No se pudo guardar. Probá de nuevo.'}$('ki-ok').disabled=false};
+
+$('kg-monto').addEventListener('blur',e=>{e.target.value=fmtIn(parse(e.target.value))});
+$('kg-ok').onclick=async()=>{const m=parse($('kg-monto').value);if(!m){$('kg-msg').textContent='Poné el monto.';return}if(!$('kg-det').value.trim()){$('kg-msg').textContent='Escribí qué se pagó en Detalle.';return}if(!online){$('kg-msg').textContent='Sin conexión con la planilla.';return}
+  const x={id:uid('k'),tipo:'gasto',fecha:$('kg-fecha').value||hoyISO(),monto:m,origen:kSel,origenN:accN(kSel),destino:'',destinoN:'',cat:$('kg-cat').value,local:$('kg-local').value,localN:$('kg-local').value?locN($('kg-local').value):'General',detalle:$('kg-det').value.trim(),cargo:QUIEN};
+  $('kg-ok').disabled=true;try{await put('movcaja',x.id,x);DB.movcaja[x.id]=x;$('kg-monto').value='';$('kg-det').value='';$('kg-msg').textContent='Gasto registrado: '+fmt(m)+' de '+accN(kSel)+'.';renderCajas()}
+  catch(e){$('kg-msg').textContent='No se pudo guardar. Probá de nuevo.'}$('kg-ok').disabled=false};
+
+$('fx-monto').addEventListener('input',()=>{if(!fxEdit)return;const o=$('fx-monto').dataset.orig;$('fx-rige-l').hidden=!(o!==undefined&&Math.round(parse($('fx-monto').value))!==Math.round(+o))});
 
 /* ================= CHEQUES ================= */
 let LIM=0,filtro='pend',cEdit=null;
@@ -1241,27 +1347,28 @@ function renderEmpleados(){document.querySelectorAll('.dn-only').forEach(e=>e.hi
     :`<tr><td colspan="6" class="empty">${E.length?'No hay empleados en este filtro.':'Todavía no cargaste empleados. Agregalos uno por uno abajo, o pegá la lista entera en "Cargar varios de una vez".'}</td></tr>`;
   $('e-lista').querySelectorAll('[data-eed]').forEach(b=>b.onclick=()=>editEmp(b.dataset.eed));renderSueldos()}
 let emMes=hoyISO().slice(0,7);
-function adelMes(id,m){return Object.values(DB.adelantos).filter(x=>x.tipo!=='sueldo'&&x.emp===id&&x.fecha.slice(0,7)===m)}
+function adelMes(id,m){return Object.values(DB.adelantos).filter(x=>x.tipo!=='sueldo'&&x.emp===id&&(x.mes||x.fecha.slice(0,7))===m)}
 function pagosSueldo(id,m){return Object.values(DB.adelantos).filter(x=>x.tipo==='sueldo'&&x.emp===id&&x.mes===m).sort((a,b)=>a.fecha.localeCompare(b.fecha))}
 function estadoPago(id,m,total){const P=pagosSueldo(id,m),pag=P.reduce((t,x)=>t+x.monto,0),falta=Math.max(0,Math.round(total-pag));
   return{P,pag,falta,ok:P.length&&falta<=0}}
 function estadoHTML(id,m,total){const x=estadoPago(id,m,total);if(total<=0&&!x.P.length)return'';
   if(x.ok)return `<div><span class="pill">✓ Pagado ${fCorta(x.P[x.P.length-1].fecha)}</span></div>`;
   return (x.P.length?`<div class="note">pagado ${fmt(x.pag)}</div>`:'')+`<div><button class="mini" data-pagar="${esc(id)}" data-falta="${x.falta}">${x.P.length?'Pagar lo que falta':'Marcar pagado'}</button></div>`}
-function frAcuLoc(id,m){const c={};Object.values(DB.dias).forEach(d0=>{if(d0.fecha.slice(0,7)!==m||d0.bolModo!==2)return;const d=normDia(d0);
-  Object.entries(d.fq).forEach(([L,o])=>Object.entries(o||{}).forEach(([t,e])=>{if(e===id&&((d.fpag[L]||{})[t])===false)c[L]=(c[L]||0)+(((d.fh[L]||{})[t])||0)}))});
+function frAcuLoc(id,m){const c={};Object.values(DB.dias).forEach(d0=>{if(d0.fecha.slice(0,7)!==m||!(d0.bolModo>=2))return;const d=normDia(d0);
+  Object.entries(d.fq).forEach(([L,o])=>Object.entries(o||{}).forEach(([t,e])=>{if(e===id&&!frPagado(d,L,t))c[L]=(c[L]||0)+(((d.fh[L]||{})[t])||0)}))});
   return Object.keys(c).sort((a,b)=>c[b]-c[a])[0]||''}
 function pagoForm(id,falta,m){const e=DB.empleados[id],L=e.tipo==='Franquero'?frAcuLoc(id,m):e.local,o=L?'bol:'+L:'general';
   return `<tr class="sub" data-pgf="${esc(id)}"><td colspan="8"><div class="row"><b>Pago del sueldo de ${esc(mesT(m))} a ${esc(e.nombre)}</b><input class="f money" data-pm value="${fmtIn(falta)}" inputmode="decimal" style="max-width:140px" aria-label="Monto"><input type="date" class="f" data-pf value="${hoyISO()}" style="max-width:160px" aria-label="Fecha"><label class="note">Sale de <select class="f" data-po style="max-width:200px">${ACC_OPTS(o)}</select></label><input class="f" data-pn placeholder="Nota (opcional)" style="max-width:180px"><button class="btn sm primary" data-pok>Guardar pago</button><button class="btn sm" data-px>Cancelar</button><span class="note" data-pmsg></span></div></td></tr>`}
 function frMes(id,m){let dias=0,hs=0,cob=0,dev=0;Object.values(DB.dias).forEach(d0=>{if(d0.fecha.slice(0,7)!==m)return;const d=normDia(d0),vh=d.vh||VH;let any=false;
-  Object.entries(d.fq).forEach(([L,o])=>Object.entries(o||{}).forEach(([t,e])=>{if(e===id){const h=((d.fh||{})[L]||{})[t]||0;if(h){hs+=h;dev+=h*vh;if(!(d.bolModo===2&&((d.fpag||{})[L]||{})[t]===false))cob+=h*vh;any=true}}}));if(any)dias++});return{dias,hs,cob,dev}}
+  Object.entries(d.fq).forEach(([L,o])=>Object.entries(o||{}).forEach(([t,e])=>{if(e===id){const h=((d.fh||{})[L]||{})[t]||0;if(h){hs+=h;dev+=h*vh;if(!(d.bolModo>=2&&!frPagado(d,L,t)))cob+=h*vh;any=true}}}));if(any)dias++});return{dias,hs,cob,dev}}
 function frRes(e,m){const c=frMes(e.id,m),hm=horMes(e,m),ad=adelMes(e.id,m).reduce((t,y)=>t+y.monto,0);
   const dias=hm?hm.dH:c.dias,hs=hm?hm.hH:c.hs,corr=hm?hm.hH*VH:c.dev;return{hm,dias,hs,corr,cob:c.cob,ad,falta:corr-c.cob-ad,base:corr-c.cob-ad}}
-function adelForm(id){const e=DB.empleados[id],o=e.local?'bol:'+e.local:'general';
-  return `<tr class="sub" data-adf="${esc(id)}"><td colspan="7"><div class="row"><b>Adelanto a ${esc(e.nombre)}</b><input class="f money" data-am placeholder="Monto" inputmode="decimal" style="max-width:140px"><input type="date" class="f" data-af value="${hoyISO()}" style="max-width:160px"><select class="f" data-ao style="max-width:200px">${ACC_OPTS(o)}</select><input class="f" data-an placeholder="Nota (opcional)" style="max-width:200px"><button class="btn sm" data-aok>Guardar adelanto</button><button class="mini" data-ax>Cancelar</button><span class="note" data-amsg></span></div></td></tr>`}
+function adelForm(id){const e=DB.empleados[id],o=e.local?'bol:'+e.local:'general',m=emMes,ms=[addMes(m,-1),m,addMes(m,1)];
+  return `<tr class="sub" data-adf="${esc(id)}"><td colspan="7"><div class="row"><b>Adelanto a ${esc(e.nombre)}</b><input class="f money" data-am placeholder="Monto" inputmode="decimal" style="max-width:140px"><input type="date" class="f" data-af value="${hoyISO()}" style="max-width:160px" aria-label="Fecha en que se lo diste"><label class="note">a cuenta del sueldo de <select class="f" data-ames style="max-width:170px">${ms.map(x=>`<option value="${x}"${x===m?' selected':''}>${mesT(x)}</option>`).join('')}</select></label><select class="f" data-ao style="max-width:200px">${ACC_OPTS(o)}</select><input class="f" data-an placeholder="Nota (opcional)" style="max-width:200px"><button class="btn sm" data-aok>Guardar adelanto</button><button class="mini" data-ax>Cancelar</button><span class="note" data-amsg></span></div></td></tr>`}
 function renderSueldos(){
   const m=emMes,hoy=hoyISO(),E=Object.values(DB.empleados||{}).filter(e=>!e.baja||e.baja>=m+'-01');
-  $('em-mes').textContent=mesT(m);
+  $('em-mes').textContent='Sueldo de '+mesT(m);
+  {const mp=addMes(m,1),hm=hoyISO().slice(0,7);$('em-pago').innerHTML=`Estás viendo el sueldo de lo trabajado en <b>${mesT(m)}</b>, que se paga a principios de <b>${mesT(mp)}</b>. Los adelantos que cargues acá se descuentan de este sueldo.`+(m===hm?` Para pagar el sueldo de ${mesT(addMes(m,-1))}, tocá ‹.`:m===addMes(hm,-1)?' Este es el que se paga ahora.':'')}
   const fx=E.filter(e=>e.tipo!=='Franquero').sort((a,b)=>(a.local||'zz').localeCompare(b.local||'zz')||a.nombre.localeCompare(b.nombre));
   let tS=0,tP=0,tA=0,tPag=0,nOk=0;
   $('ef-lista').innerHTML=fx.length?fx.map(e=>{const s=empSueldoMes(e,m),ad=adelMes(e.id,m),a=ad.reduce((t,x)=>t+x.monto,0);tS+=s.s;tP+=s.p;tA+=a;{const ep=estadoPago(e.id,m,s.s+s.p-a);tPag+=ep.pag;if(ep.ok)nOk++}const w=waNum(e.tel),hm=horMes(e,m);
@@ -1270,7 +1377,7 @@ function renderSueldos(){
       <td class="num">${fmt(s.s)}</td><td class="num">${s.sin?`<span class="note" style="text-decoration:line-through">${fmt(s.pBase)}</span><div class="note neg">no cumplió</div><button class="mini" data-pres="${esc(e.id)}">Devolver</button>`:`${fmt(s.p)}<div><button class="mini" data-pres="${esc(e.id)}">Sacar</button></div>`}</td><td class="num">${a?fmt(a)+(ad.length>1?'<div class="note">'+ad.length+' adelantos</div>':''):'—'}</td><td class="num"><b>${fmt(s.s+s.p-a)}</b>${estadoHTML(e.id,m,s.s+s.p-a)}</td>
       <td class="num"><button class="mini" data-adel="${esc(e.id)}">+ Adelanto</button>${w?` <a class="mini" href="https://wa.me/${w}?text=${encodeURIComponent(msgSueldo(e,m))}" target="_blank" rel="noopener">Enviar</a>`:''}</td></tr>`+
       pagosSueldo(e.id,m).map(x=>`<tr class="sub"><td colspan="6">↳ Pago de sueldo ${fCorta(x.fecha)} · sale de ${esc(accN(x.origen))} · ${fmt(x.monto)}</td><td colspan="2" class="num"><button class="mini" data-adel-del="${esc(x.id)}">Deshacer</button></td></tr>`).join('')+
-      (ad.length?ad.map(x=>`<tr class="sub"><td colspan="5">↳ Adelanto ${fCorta(x.fecha)} · sale de ${esc(accN(x.origen))}${x.nota?' · '+esc(x.nota):''}</td><td class="num">${fmt(x.monto)}</td><td colspan="2" class="num"><button class="mini" data-adel-del="${esc(x.id)}">Borrar</button></td></tr>`).join(''):'')}).join('')
+      (ad.length?ad.map(x=>`<tr class="sub"><td colspan="5">↳ Adelanto dado el ${fCorta(x.fecha)}${(x.fecha.slice(0,7)!==m)?' (a cuenta de este mes)':''} · sale de ${esc(accN(x.origen))}${x.nota?' · '+esc(x.nota):''}</td><td class="num">${fmt(x.monto)}</td><td colspan="2" class="num"><button class="mini" data-adel-del="${esc(x.id)}">Borrar</button></td></tr>`).join(''):'')}).join('')
     :'<tr><td colspan="7" class="empty">No hay empleados fijos cargados. Agregalos abajo con tipo "Fijo".</td></tr>';
   $('ef-tot').innerHTML=fx.length?`<tr><td>Total</td><td></td><td></td><td class="num">${fmt(tS)}</td><td class="num">${fmt(tP)}</td><td class="num">${fmt(tA)}</td><td class="num">${fmt(tS+tP-tA)}<div class="note">pagado ${fmt(tPag)} · ${nOk} de ${fx.length}</div></td><td></td></tr>`:'';
   const fr=E.filter(e=>e.tipo==='Franquero').sort((a,b)=>a.nombre.localeCompare(b.nombre));
@@ -1285,7 +1392,7 @@ function renderSueldos(){
     f.querySelector('[data-am]').addEventListener('blur',ev=>{ev.target.value=fmtIn(parse(ev.target.value))});
     f.querySelector('[data-aok]').onclick=async ev=>{const monto=parse(f.querySelector('[data-am]').value);if(!monto){f.querySelector('[data-amsg]').textContent='Poné el monto.';return}
       const o=f.querySelector('[data-ao]').value,id=b.dataset.adel;
-      const x={id:uid('a'),emp:id,empN:empN(id),fecha:f.querySelector('[data-af]').value||hoyISO(),monto,origen:o,origenN:accN(o),nota:f.querySelector('[data-an]').value.trim()};
+      const x={id:uid('a'),emp:id,empN:empN(id),mes:f.querySelector('[data-ames]').value||emMes,fecha:f.querySelector('[data-af]').value||hoyISO(),monto,origen:o,origenN:accN(o),nota:f.querySelector('[data-an]').value.trim()};
       ev.target.disabled=true;try{await put('adelantos',x.id,x);DB.adelantos[x.id]=x;renderSueldos()}catch(err){ev.target.disabled=false;f.querySelector('[data-amsg]').textContent='No se pudo guardar.'}}});
   document.querySelectorAll('#view-emp [data-pagar]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-pgf],[data-adf]').forEach(x=>x.remove());const tr=b.closest('tr'),id=b.dataset.pagar;
     tr.insertAdjacentHTML('afterend',pagoForm(id,+b.dataset.falta,m));const f=tr.nextElementSibling,mi=f.querySelector('[data-pm]');mi.focus();mi.select();
@@ -1536,6 +1643,7 @@ function renderMes(){
   Object.values(DB.fijos).forEach(x=>{const e=fijoEstado(x,m);if(!e||(e.est!=='pagado'&&e.est!=='debitado'))return;const k=x.local||'';(L[k]||(L[k]={rec:0,sue:0,fij:0,pag:0})).fij+=e.monto;T.fij+=e.monto;cats[x.cat]=(cats[x.cat]||0)+e.monto});
   Object.values(DB.cheques).forEach(c=>{if(c.cobrado&&(c.cobradoEl||c.cobro).slice(0,7)===m){T.che+=c.monto;L[''].pag+=c.monto;cats['Cheques']=(cats['Cheques']||0)+c.monto}});
   Object.values(DB.provmovs).forEach(x=>{if(x.tipo==='pago'&&x.medio!=='Cheque'&&x.fecha.slice(0,7)===m){T.pag+=x.monto;L[''].pag+=x.monto;cats['Proveedores']=(cats['Proveedores']||0)+x.monto}});
+  Object.values(DB.movcaja||{}).forEach(x=>{if(x.tipo!=='gasto'||x.fecha.slice(0,7)!==m||x.cat==='Retiro')return;const k=x.local??'';(L[k]||(L[k]={rec:0,sue:0,fij:0,pag:0})).pag+=x.monto;T.pag+=x.monto;cats[x.cat]=(cats[x.cat]||0)+x.monto});
   T.rec=T.ef+T.vi;const res=T.rec-T.fr-T.bol-T.fij-T.pag-T.che;
   $('m-dias').textContent=rows.length+(rows.length===1?' día cargado':' días cargados')+' · '+mesT(m);
   $('m-res').textContent=fmt(res);$('m-res').classList.toggle('neg',res<0);
@@ -1555,11 +1663,47 @@ $('mes').onchange=renderMes;
 
 /* ================= navegación ================= */
 let vista='dia';
-function show(v){if(v==='yo'&&!DUENO)v='cajas';vista=v;['dia','cajas','fijos','prov','che','emp','mes','yo'].forEach(k=>$('view-'+k).hidden=k!==v);
+function show(v){if(v==='yo'&&!DUENO)v='cajas';vista=v;['dia','cajas','bol','fijos','prov','che','emp','mes','yo'].forEach(k=>$('view-'+k).hidden=k!==v);
   document.querySelectorAll('#tabs .tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.v===v));
   $('bar-dia').hidden=v!=='dia';$('bar-mes').hidden=v!=='mes';refreshAll()}
 document.querySelectorAll('#tabs .tab').forEach(t=>t.onclick=()=>show(t.dataset.v));
-function refreshAll(){if(vista==='dia'){calc();renderFijosHoy();renderProvHoy();setDayState()}if(vista==='cajas')renderCajas();if(vista==='fijos')renderFijos();if(vista==='che'){renderCheques();avisoCheque()}if(vista==='mes')renderMes();if(vista==='emp')renderEmpleados();if(vista==='prov')renderProveedores();if(vista==='yo')renderMiCaja()}
+
+/* ======= pestaña Bolsines ======= */
+let blMes=null;
+function renderBol(){const m=blMes||(blMes=hoyISO().slice(0,7));$('bl-mes').textContent=mesT(m);
+  const D=Object.values(DB.dias).filter(d=>d.fecha.slice(0,7)===m).sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(normDia);
+  const short=n=>n.replace('25 y ','').replace('A. ','');
+  $('bl-head').innerHTML=`<tr><th>Día</th>${LOCALES.map(l=>`<th>${esc(short(l.n))}</th>`).join('')}<th>Total</th></tr>`;
+  const T={};let tAG=0,tG=0;
+  $('bl-body').innerHTML=D.length?D.map(d=>{let dAG=0,dG=0;const cells=LOCALES.map(l=>{const S=sueLoc(d,l);dAG+=S.aG;dG+=S.guard;tAG+=S.aG;tG+=S.guard;const t=T[l.id]||(T[l.id]={ag:0,g:0});t.ag+=S.aG;t.g+=S.guard;
+      if(!S.m2)return `<td><span class="g">${fmt(S.bol)}</span><span class="a">automático</span></td>`;
+      const f=Math.round(S.aG-S.guard);return `<td><span class="g${f>0?' neg':''}">${S.guard?fmt(S.guard):'—'}</span><span class="a">de ${fmt(S.aG)}</span></td>`}).join('');
+    return `<tr class="click" data-bd="${d.fecha}"><td>${fCorta(d.fecha)}</td>${cells}<td><span class="g">${fmt(dG)}</span><span class="a">de ${fmt(dAG)}</span></td></tr>`}).join('')
+    :`<tr><td colspan="${LOCALES.length+2}" class="empty">No hay días cargados en ${mesT(m)}.</td></tr>`;
+  const hoy=hoyISO();
+  $('bl-foot').innerHTML=D.length?`<tr><td>Falta guardar hoy</td>${LOCALES.map(l=>{const p=pendGuardar(l.id,addDays(hoy,1));return `<td class="${p>0?'neg':''}">${p>0?fmt(p):'✓'}</td>`}).join('')}<td>${(()=>{const p=LOCALES.reduce((a,l)=>a+Math.max(0,pendGuardar(l.id,addDays(hoy,1))),0);return p?fmt(p):'✓'})()}</td></tr>`:'';
+  $('bl-body').querySelectorAll('[data-bd]').forEach(tr=>tr.onclick=()=>{show('dia');go(tr.dataset.bd)});
+  const pend=LOCALES.reduce((a,l)=>a+Math.max(0,pendGuardar(l.id,addDays(hoy,1))),0);
+  $('bl-res').innerHTML=`<div class="cell hero"><span class="k">Falta guardar (a hoy)</span><span class="v${pend?' neg':''}">${fmt(pend)}</span><span class="s">suma de todos los locales</span></div>
+    <div class="cell"><span class="k">Guardado en ${MESES[+m.slice(5,7)-1]}</span><span class="v">${fmt(tG)}</span><span class="s">de ${fmt(tAG)} a guardar</span></div>
+    <div class="cell"><span class="k">En bolsines ahora</span><span class="v">${fmt(ACC.filter(a=>a.id.startsWith('bol:')).reduce((t,a)=>t+(saldos(hoy)[a.id]||0),0))}</span><span class="s">efectivo en los 9 bolsines</span></div>`;
+  // valor de cada turno
+  $('bl-vh').textContent='hora a '+fmt(VH);
+  const grupos=[{g:'02',n:LOCALES.filter(l=>l.g==='02').map(l=>l.n).join(', ')},{g:'00',n:LOCALES.filter(l=>l.g==='00').map(l=>l.n).join(', ')},{g:'24',n:LOCALES.filter(l=>l.g==='24').map(l=>l.n).join(', ')}];
+  const lun='2026-11-16',jue='2026-11-19';
+  $('tv-body').innerHTML=grupos.map(G=>{const l=LOCALES.find(x=>x.g===G.g);const fila=(f,dl)=>{const hs=['m','t','n'].map(t=>hTurno(l.id,t,f));
+      return `<td>${dl}</td>${hs.map(x=>`<td class="num"><b>${fmt(x*VH)}</b><div class="note">${String(x).replace('.',',')} hs</div></td>`).join('')}<td class="num">${fmt(hs.reduce((a,x)=>a+x,0)*VH)}</td>`};
+    return G.g==='24'?`<tr><td><b>${esc(G.n)}</b></td>${fila(lun,'todos los días')}</tr>`
+      :`<tr><td rowspan="2"><b>${esc(G.n)}</b><div class="note">${G.g==='02'?'cierra 02:30 dom a mié':'cierra 00 dom a mié'}</div></td>${fila(lun,'dom a mié')}</tr><tr>${fila(jue,'jue a sáb')}</tr>`}).join('');
+  // franqueros con días acumulados
+  const F={};D.forEach(d=>{if(!(d.bolModo>=2))return;Object.entries(d.fq).forEach(([L,o])=>Object.entries(o||{}).forEach(([t,e])=>{const hF=((d.fh[L]||{})[t])||0;if(!e||!hF||frPagado(d,L,t))return;
+    const x=F[e]||(F[e]={d:new Set(),m:0,L:new Set()});x.d.add(d.fecha);x.m+=hF*(d.vh||VH);x.L.add(locN(L))}))});
+  $('bl-fr-mes').textContent=mesT(m);
+  const ks=Object.keys(F);$('bl-fr').innerHTML=ks.length?ks.map(e=>{const x=F[e],pag=pagosSueldo(e,m).reduce((a,y)=>a+y.monto,0);
+    return `<tr><td><b>${esc(empN(e))}</b>${pag?`<div class="note">ya se le pagó ${fmt(pag)} del mes</div>`:''}</td><td class="num">${x.d.size}</td><td class="num">${fmt(x.m)}</td><td>${esc([...x.L].join(', '))}</td></tr>`}).join('')
+    :'<tr><td colspan="4" class="empty">Nadie acumuló días sin cobrar este mes.</td></tr>'}
+$('bl-prev').onclick=()=>{blMes=addMes(blMes,-1);renderBol()};$('bl-next').onclick=()=>{blMes=addMes(blMes,1);renderBol()};
+function refreshAll(){if(vista==='dia'){calc();renderFijosHoy();renderProvHoy();setDayState()}if(vista==='cajas')renderCajas();if(vista==='bol')renderBol();if(vista==='fijos')renderFijos();if(vista==='che'){renderCheques();avisoCheque()}if(vista==='mes')renderMes();if(vista==='emp')renderEmpleados();if(vista==='prov')renderProveedores();if(vista==='yo')renderMiCaja()}
 
 $('rec-body').addEventListener('click',e=>{const b=e.target.closest('[data-use]');if(!b)return;const[k,l,t]=b.dataset.use.split('|'),c=cierreDe(state.fecha,l,t);if(!c)return;
   $(`${k}-${l}-${t}`).value=fmtIn(c[k])||'0';readDay()});
@@ -1602,7 +1746,7 @@ if(API&&CLAVE&&!QUIEN){verSetup(true);$('s-clave').value=CLAVE;$('s-msg').textCo
 else if(API&&CLAVE)conectar().then(r=>{if(r==='clave'){ls.del('caja_clave');verSetup(true);$('s-msg').textContent='La clave cambió. Escribí la clave nueva.'}});else{verSetup(true);$('status').textContent='Falta conectar con la planilla'}
 
 /* ======= versión de la app: botón Actualizar y aviso de versión nueva ======= */
-const APP_VER='2026-11-09a';
+const APP_VER='2026-11-16a';
 function actualizarApp(){const u=location.pathname+'?v='+Date.now()+location.hash;location.replace(u)}
 async function chequearVersion(){try{const r=await fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'});if(!r.ok)return;const t=await r.text();const m=t.match(/const APP_VER='([^']+)'/);
   if(m&&m[1]!==APP_VER){const b=document.getElementById('upd-banner');if(b)b.hidden=false}}catch(e){}}
